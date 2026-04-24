@@ -47,6 +47,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Nutraflow uses your camera to photograph meals for AI nutrition analysis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Nutraflow accesses your photo library so you can import meal photos for AI analysis.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
