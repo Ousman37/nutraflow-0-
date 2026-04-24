@@ -1,19 +1,17 @@
 #!/bin/bash
-
-# NutraFlow iOS Runner Script
-
-DEVICE_NAME="iPhone 15"
+set -euo pipefail
 
 echo "🚀 Starting NutraFlow on iOS Simulator..."
 
-# Boot simulator if not already running
-xcrun simctl boot "$DEVICE_NAME" 2>/dev/null
+# Target the dedicated NutraFlow simulator
+DEVICE_ID="A6706F3F-D552-47F8-8967-BFB95CF64576"
+DEVICE_NAME="NutraFlow Simulator"
 
-# Open Simulator app
+echo "📱  Device : $DEVICE_NAME"
+echo "🆔  UDID   : $DEVICE_ID"
+
+xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
 open -a Simulator
+sleep 2
 
-# Wait a bit for simulator to fully boot
-sleep 3
-
-# Run Flutter app
-flutter run -d "$DEVICE_NAME"
+flutter run -d "$DEVICE_ID"
