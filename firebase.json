@@ -1,0 +1,34 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "nutraflow-199ae",
+          "appId": "1:157447885473:android:da84d82e5ac91d080856e0",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "nutraflow-199ae",
+          "appId": "1:157447885473:ios:baf03c7ccfd910d70856e0",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "nutraflow-199ae",
+          "configurations": {
+            "android": "1:157447885473:android:da84d82e5ac91d080856e0",
+            "ios": "1:157447885473:ios:baf03c7ccfd910d70856e0"
+          }
+        }
+      }
+    }
+  }
+}
