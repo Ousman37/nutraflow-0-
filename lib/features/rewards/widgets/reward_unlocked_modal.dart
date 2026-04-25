@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../models/reward_model.dart';
 
 class RewardUnlockedModal extends StatefulWidget {
@@ -94,7 +93,7 @@ class _RewardUnlockedModalState extends State<RewardUnlockedModal>
                 children: [
                   Text(
                     'Achievement Unlocked!',
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: info.color1,
@@ -105,7 +104,7 @@ class _RewardUnlockedModalState extends State<RewardUnlockedModal>
                   Text(
                     info.title,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -115,7 +114,7 @@ class _RewardUnlockedModalState extends State<RewardUnlockedModal>
                   Text(
                     info.motivationalMessage,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                       color: Colors.white.withValues(alpha: 0.72),
@@ -224,7 +223,7 @@ class _ContinueButton extends StatelessWidget {
         child: Center(
           child: Text(
             'Continue',
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'PlusJakartaSans', 
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.white,

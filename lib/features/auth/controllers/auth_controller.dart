@@ -200,6 +200,10 @@ class AuthController extends GetxController {
     await _authService.signOut();
   }
 
+  Future<void> deleteAccount() async {
+    await _authService.deleteAccount();
+  }
+
   String get currentUserId =>
       _authService.currentUserId ?? firebaseUser.value?.uid ?? '';
 

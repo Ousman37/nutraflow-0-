@@ -10,7 +10,6 @@ class SubscriptionService {
         ? SubscriptionConfig.iosApiKey
         : SubscriptionConfig.androidApiKey;
 
-    // Remove or guard this with kDebugMode in production.
     await Purchases.setLogLevel(LogLevel.debug);
     await Purchases.configure(PurchasesConfiguration(apiKey));
   }
@@ -29,7 +28,8 @@ class SubscriptionService {
   // Whether the active customer has the "pro" entitlement.
   Future<bool> checkIsSubscribed() async {
     final info = await Purchases.getCustomerInfo();
-    return info.entitlements.active.containsKey(SubscriptionConfig.entitlementId);
+    return info.entitlements.active
+        .containsKey(SubscriptionConfig.entitlementId);
   }
 
   Future<CustomerInfo> getCustomerInfo() => Purchases.getCustomerInfo();
@@ -44,8 +44,10 @@ class SubscriptionService {
   }
 
   // Initiates a purchase. Throws PlatformException if it fails or is cancelled.
-  Future<CustomerInfo> purchasePackage(Package package) =>
-      Purchases.purchasePackage(package);
+  Future<CustomerInfo> purchasePackage(Package package) async {
+    final result = await Purchases.purchase(PurchaseParams.package(package));
+    return result.customerInfo;
+  }
 
   // Restores previous purchases (App Store / Play Store).
   Future<CustomerInfo> restorePurchases() => Purchases.restorePurchases();
@@ -61,5 +63,16 @@ class SubscriptionService {
     } catch (_) {
       return false;
     }
+  }
+
+  // Register a listener that fires whenever RevenueCat has updated CustomerInfo.
+  // This is the reliable hook for sandbox purchases where the entitlement
+  // confirmation may arrive after purchasePackage() returns.
+  void addCustomerInfoUpdateListener(CustomerInfoUpdateListener listener) {
+    Purchases.addCustomerInfoUpdateListener(listener);
+  }
+
+  void removeCustomerInfoUpdateListener(CustomerInfoUpdateListener listener) {
+    Purchases.removeCustomerInfoUpdateListener(listener);
   }
 }

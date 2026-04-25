@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../routes/app_routes.dart';
 
@@ -85,7 +84,7 @@ class _MotivationViewState extends State<MotivationView>
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Text(
         "You'll meet your goal\neasily with NutraFlow!",
-        style: GoogleFonts.poppins(
+        style: TextStyle(fontFamily: 'PlusJakartaSans', 
           fontSize: 28,
           fontWeight: FontWeight.w700,
           color: Colors.white,
@@ -139,7 +138,7 @@ class _MotivationViewState extends State<MotivationView>
                     const SizedBox(width: 14),
                     Text(
                       text,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'PlusJakartaSans', 
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.9),
@@ -176,7 +175,7 @@ class _MotivationViewState extends State<MotivationView>
           child: Center(
             child: Text(
               'Start Your Journey',
-              style: GoogleFonts.poppins(
+              style: TextStyle(fontFamily: 'PlusJakartaSans', 
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,

@@ -32,6 +32,12 @@ class AddMealController extends GetxController {
   void onInit() {
     super.onInit();
     _suggestMealType();
+    // Pre-load an image passed from the scanner screen.
+    final args = Get.arguments;
+    if (args is Map && args['image'] is File) {
+      selectedImage.value = args['image'] as File;
+      WidgetsBinding.instance.addPostFrameCallback((_) => analyzeWithImage());
+    }
   }
 
   @override

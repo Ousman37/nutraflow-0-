@@ -15,4 +15,8 @@ abstract class AppRoutes {
   static const String motivation = '/motivation';
   static const String paywall = '/paywall';
   static const String rewards = '/rewards';
+  static const String scanner = '/scanner';
+  static const String meals = '/meals';
+  static const String workouts = '/workouts';
+  static const String progress = '/progress';
 }

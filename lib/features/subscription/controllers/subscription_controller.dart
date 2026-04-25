@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../subscription_config.dart';
 import '../services/subscription_service.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../auth/services/firestore_service.dart';
 import '../../../routes/app_routes.dart';
 
 enum SubscriptionStatus { loading, free, pro }
@@ -14,6 +15,7 @@ enum SubscriptionStatus { loading, free, pro }
 class SubscriptionController extends GetxController {
   final _service = SubscriptionService();
   final _authController = Get.find<AuthController>();
+  final _firestoreService = FirestoreService();
 
   final Rx<SubscriptionStatus> status = SubscriptionStatus.loading.obs;
   final RxInt freeAnalysesUsed = 0.obs;
@@ -24,15 +26,14 @@ class SubscriptionController extends GetxController {
   final Rx<Package?> lifetimePackage = Rx<Package?>(null);
   final RxString monthlyPriceString = r'$9.99/mo'.obs;
   final RxString yearlyPriceString = r'$59.99/yr'.obs;
-  // Which plan is selected on the paywall: 'monthly' or 'yearly'
   final RxString selectedPlan = 'yearly'.obs;
 
-  // Alias used by the purchase button — whichever plan is selected.
   String get priceString => selectedPlan.value == 'yearly'
       ? yearlyPriceString.value
       : monthlyPriceString.value;
 
   bool _sdkReady = false;
+  CustomerInfoUpdateListener? _customerInfoListener;
 
   bool get isPro => status.value == SubscriptionStatus.pro;
   bool get isStatusLoading => status.value == SubscriptionStatus.loading;
@@ -48,12 +49,27 @@ class SubscriptionController extends GetxController {
     ever<User?>(_authController.firebaseUser, _onAuthChanged);
   }
 
+  @override
+  void onClose() {
+    if (_customerInfoListener != null) {
+      _service.removeCustomerInfoUpdateListener(_customerInfoListener!);
+    }
+    super.onClose();
+  }
+
   // ── Initialization ─────────────────────────────────────────────────────────
 
   Future<void> _initialize() async {
     try {
       await SubscriptionService.initializeSdk();
       _sdkReady = true;
+
+      // Wire up the listener BEFORE any login so no update is ever missed.
+      // This is the key fix for sandbox: RC may confirm the entitlement async,
+      // after purchasePackage() has already returned.
+      _customerInfoListener = _onCustomerInfoUpdate;
+      _service.addCustomerInfoUpdateListener(_customerInfoListener!);
+
       await _loadFreeAnalysesUsed();
 
       final uid = _authController.currentUserId;
@@ -65,21 +81,26 @@ class SubscriptionController extends GetxController {
 
       _fetchOfferings(); // fire-and-forget
     } catch (_) {
-      status.value = SubscriptionStatus.free;
+      // SDK failed to init — fall back to local cache so paying users aren't locked out
+      final cached = await _loadCachedProStatus();
+      status.value =
+          cached ? SubscriptionStatus.pro : SubscriptionStatus.free;
     }
   }
 
   Future<void> _loginAndRefresh(String uid) async {
     try {
       final info = await _service.logIn(uid);
-      status.value = _service.isActiveFromInfo(info)
-          ? SubscriptionStatus.pro
-          : SubscriptionStatus.free;
+      final isActive = _service.isActiveFromInfo(info);
+      status.value =
+          isActive ? SubscriptionStatus.pro : SubscriptionStatus.free;
+      // Keep local cache in sync with RevenueCat truth
+      if (isActive) await _persistProStatus(true);
     } catch (_) {
-      // Network failure → fail open so paying users aren't blocked
-      if (status.value == SubscriptionStatus.loading) {
-        status.value = SubscriptionStatus.free;
-      }
+      // Network failure → fall back to local cache so paying users aren't blocked
+      final cached = await _loadCachedProStatus();
+      status.value =
+          cached ? SubscriptionStatus.pro : SubscriptionStatus.free;
     }
   }
 
@@ -96,6 +117,8 @@ class SubscriptionController extends GetxController {
     try {
       await _service.logOut();
     } catch (_) {}
+    // Clear the cached pro flag so it doesn't bleed into the next login
+    await _persistProStatus(false);
     status.value = SubscriptionStatus.free;
     monthlyPackage.value = null;
     yearlyPackage.value = null;
@@ -122,6 +145,45 @@ class SubscriptionController extends GetxController {
     lifetimePackage.value = current.lifetime;
   }
 
+  // ── RevenueCat customer info listener ─────────────────────────────────────
+  // Called whenever RevenueCat delivers an updated CustomerInfo — including
+  // async entitlement confirmations that arrive after purchasePackage() returns.
+
+  void _onCustomerInfoUpdate(CustomerInfo info) {
+    final nowIsPro = _service.isActiveFromInfo(info);
+    if (nowIsPro && status.value != SubscriptionStatus.pro) {
+      status.value = SubscriptionStatus.pro;
+      _persistProStatus(true);
+    } else if (!nowIsPro && status.value == SubscriptionStatus.pro) {
+      // Subscription expired or was revoked
+      status.value = SubscriptionStatus.free;
+      _persistProStatus(false);
+    }
+  }
+
+  // ── Persistence ────────────────────────────────────────────────────────────
+
+  Future<void> _persistProStatus(bool isPro) async {
+    // 1. Local SharedPreferences — fast, works offline
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(SubscriptionConfig.proStatusPrefsKey, isPro);
+
+    // 2. Firestore — survives app reinstall, readable server-side
+    final uid = _authController.currentUserId;
+    if (uid.isNotEmpty) {
+      try {
+        await _firestoreService.setProStatus(uid, isPro);
+      } catch (_) {
+        // Non-fatal: Firestore write fails gracefully, local cache is enough
+      }
+    }
+  }
+
+  Future<bool> _loadCachedProStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(SubscriptionConfig.proStatusPrefsKey) ?? false;
+  }
+
   // ── Free-trial tracking ────────────────────────────────────────────────────
 
   Future<void> _loadFreeAnalysesUsed() async {
@@ -130,7 +192,6 @@ class SubscriptionController extends GetxController {
         prefs.getInt(SubscriptionConfig.freeLogsPrefsKey) ?? 0;
   }
 
-  // Call after each successful AI meal analysis (not after save).
   Future<void> recordAnalysis() async {
     if (isPro) return;
     freeAnalysesUsed.value++;
@@ -145,6 +206,7 @@ class SubscriptionController extends GetxController {
     final pkg = selectedPlan.value == 'yearly'
         ? (yearlyPackage.value ?? monthlyPackage.value)
         : monthlyPackage.value;
+
     if (pkg == null) {
       Get.snackbar(
         'Not Available',
@@ -159,16 +221,24 @@ class SubscriptionController extends GetxController {
     isPurchasing.value = true;
     try {
       final info = await _service.purchasePackage(pkg);
+
+      // Always close the paywall — the transaction was accepted by the store.
+      Get.back();
+
       if (_service.isActiveFromInfo(info)) {
+        // Entitlement confirmed immediately (common on device/prod)
         status.value = SubscriptionStatus.pro;
-        Get.back();
+        await _persistProStatus(true);
+        _showProWelcome();
+      } else {
+        // Store accepted the purchase but RC hasn't confirmed the entitlement
+        // yet (common in sandbox). The _onCustomerInfoUpdate listener will
+        // handle the final unlock — show a brief holding message.
         Get.snackbar(
-          'Welcome to NutraFlow Pro!',
-          'All features are now unlocked. Enjoy!',
+          'Activating subscription…',
+          'Your Pro access is being confirmed, just a moment.',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.shade600,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 5),
           margin: const EdgeInsets.all(16),
           borderRadius: 12,
         );
@@ -196,16 +266,9 @@ class SubscriptionController extends GetxController {
       final info = await _service.restorePurchases();
       if (_service.isActiveFromInfo(info)) {
         status.value = SubscriptionStatus.pro;
+        await _persistProStatus(true);
         Get.back();
-        Get.snackbar(
-          'Purchases Restored',
-          'Your Pro subscription has been restored.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.shade600,
-          colorText: Colors.white,
-          margin: const EdgeInsets.all(16),
-          borderRadius: 12,
-        );
+        _showProWelcome(isRestore: true);
       } else {
         Get.snackbar(
           'No Purchases Found',
@@ -228,16 +291,29 @@ class SubscriptionController extends GetxController {
     }
   }
 
+  void _showProWelcome({bool isRestore = false}) {
+    Get.snackbar(
+      isRestore ? 'Purchases Restored' : 'Welcome to NutraFlow Pro!',
+      isRestore
+          ? 'Your Pro subscription has been restored.'
+          : 'All features are now unlocked. Enjoy!',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green.shade600,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 4),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+  }
+
   // ── Gating helpers ─────────────────────────────────────────────────────────
 
-  // Use for Pro-only features (Journal, Progress). Returns true if subscribed.
   bool requirePro() {
     if (isPro) return true;
     Get.toNamed(AppRoutes.paywall);
     return false;
   }
 
-  // Use for meal analysis. Returns true if subscribed OR free trial remains.
   bool requireMealAccess() {
     if (canLogMeal) return true;
     Get.toNamed(AppRoutes.paywall);

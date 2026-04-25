@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -104,7 +103,7 @@ class _CircularNutritionProgressState extends State<CircularNutritionProgress>
                     Text(
                       widget.encouragementText,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'PlusJakartaSans', 
                         fontSize: 11.5,
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.90),
@@ -115,7 +114,7 @@ class _CircularNutritionProgressState extends State<CircularNutritionProgress>
                     // Score — dominant, bold, white
                     Text(
                       '$animatedScore',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'PlusJakartaSans', 
                         fontSize: 54,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -126,7 +125,7 @@ class _CircularNutritionProgressState extends State<CircularNutritionProgress>
                     // Level label — softer, smaller
                     Text(
                       widget.levelText,
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'PlusJakartaSans', 
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
                         color: Colors.white.withValues(alpha: 0.68),

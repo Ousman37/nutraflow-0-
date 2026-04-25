@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../controllers/reward_controller.dart';
 import '../models/reward_model.dart';
@@ -32,7 +31,7 @@ class RewardsScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     Text(
                       'YOUR MILESTONES',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'PlusJakartaSans', 
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Colors.white38,
@@ -75,7 +74,7 @@ class _TopBar extends StatelessWidget {
           Expanded(
             child: Text(
               'Rewards',
-              style: GoogleFonts.poppins(
+              style: TextStyle(fontFamily: 'PlusJakartaSans', 
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
@@ -153,7 +152,7 @@ class _StatCell extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'PlusJakartaSans', 
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -163,7 +162,7 @@ class _StatCell extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 unit,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'PlusJakartaSans', 
                   fontSize: 12,
                   color: Colors.white54,
                 ),
@@ -173,7 +172,7 @@ class _StatCell extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'PlusJakartaSans', 
               fontSize: 11,
               color: Colors.white38,
             ),
@@ -223,7 +222,7 @@ class _BadgeCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         info.title,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'PlusJakartaSans', 
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: isUnlocked ? Colors.white : Colors.white60,
@@ -240,7 +239,7 @@ class _BadgeCard extends StatelessWidget {
                         ),
                         child: Text(
                           'Unlocked',
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'PlusJakartaSans', 
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: info.color1,
@@ -252,7 +251,7 @@ class _BadgeCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   info.description,
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
                     fontSize: 11,
                     color: Colors.white38,
                     height: 1.4,
@@ -272,7 +271,7 @@ class _BadgeCard extends StatelessWidget {
                   const SizedBox(height: 5),
                   Text(
                     _progressLabel(currentStreak),
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 11,
                       color: Colors.white38,
                     ),
@@ -280,7 +279,7 @@ class _BadgeCard extends StatelessWidget {
                 ] else if (reward.unlockedAt != null) ...[
                   Text(
                     'Achieved ${DateFormat('d MMM yyyy').format(reward.unlockedAt!)}',
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 11,
                       color: info.color1.withValues(alpha: 0.65),
                     ),

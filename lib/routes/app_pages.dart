@@ -14,6 +14,8 @@ import '../features/meal/views/select_method_view.dart';
 import '../features/welcome/views/welcome_view.dart';
 import '../features/subscription/views/paywall_view.dart';
 import '../features/rewards/views/rewards_screen.dart';
+import '../features/scanner/views/scanner_view.dart';
+import '../features/profile/views/profile_view.dart';
 import 'app_routes.dart';
 
 // Slight slide-up + fade — used for action sheets and add-meal flows.
@@ -152,6 +154,18 @@ abstract class AppPages {
       page: () => const RewardsScreen(),
       customTransition: _SlideUpFadeTransition(),
       transitionDuration: const Duration(milliseconds: 260),
+    ),
+    GetPage(
+      name: AppRoutes.scanner,
+      page: () => const ScannerView(),
+      customTransition: _SlideUpFadeTransition(),
+      transitionDuration: const Duration(milliseconds: 240),
+    ),
+    GetPage(
+      name: AppRoutes.profile,
+      page: () => const ProfileView(),
+      customTransition: _SlideUpFadeTransition(),
+      transitionDuration: const Duration(milliseconds: 240),
     ),
   ];
 }

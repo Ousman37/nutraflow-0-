@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../controllers/add_meal_controller.dart';
 import '../models/meal_model.dart';
 import '../widgets/macro_breakdown_card.dart';
@@ -320,6 +321,7 @@ class _AnalysisStep extends StatelessWidget {
         children: [
           _AppBar(
             title: 'AI Analysis',
+            titleIcon: PhosphorIcons.sparkle(),
             onBack: ctrl.resetAnalysis,
           ),
           Expanded(
@@ -495,7 +497,13 @@ class _ScoreCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Nutrition Score', style: AppTextStyles.headlineSmall),
+                Row(
+                  children: [
+                    PhosphorIcon(PhosphorIcons.medal(), size: 16, color: _color),
+                    const SizedBox(width: 6),
+                    Text('Nutrition Score', style: AppTextStyles.headlineSmall),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(
                   score >= 80
@@ -543,7 +551,11 @@ class _FeedbackCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('💡', style: TextStyle(fontSize: 18)),
+              PhosphorIcon(
+                PhosphorIcons.lightbulbFilament(),
+                size: 22,
+                color: AppColors.warning,
+              ),
               const SizedBox(width: 8),
               Text('AI Feedback', style: AppTextStyles.headlineSmall),
             ],
@@ -588,8 +600,13 @@ class _FeedbackCard extends StatelessWidget {
 class _AppBar extends StatelessWidget {
   final String title;
   final VoidCallback onBack;
+  final PhosphorIconData? titleIcon;
 
-  const _AppBar({required this.title, required this.onBack});
+  const _AppBar({
+    required this.title,
+    required this.onBack,
+    this.titleIcon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -615,6 +632,10 @@ class _AppBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
+          if (titleIcon != null) ...[
+            PhosphorIcon(titleIcon!, size: 22, color: AppColors.primary),
+            const SizedBox(width: 8),
+          ],
           Text(title, style: AppTextStyles.headlineMedium),
         ],
       ),

@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../controllers/journal_controller.dart';
 import '../../meal/models/meal_model.dart';
@@ -195,7 +194,7 @@ class _SectionHeader extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'PlusJakartaSans', 
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
@@ -214,7 +213,7 @@ class _SectionHeader extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '$mealCount meal${mealCount == 1 ? '' : 's'}',
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'PlusJakartaSans', 
               fontSize: 11,
               fontWeight: FontWeight.w500,
               color: AppColors.textHint,
@@ -386,7 +385,7 @@ class _MealCard extends StatelessWidget {
                         ),
                         child: Text(
                           '${meal.nutrition.score}',
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'PlusJakartaSans', 
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: _scoreColor,
@@ -493,7 +492,7 @@ class _MacroPill extends StatelessWidget {
       ),
       child: Text(
         '$label  ${value.round()}g',
-        style: GoogleFonts.poppins(
+        style: TextStyle(fontFamily: 'PlusJakartaSans', 
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: color,

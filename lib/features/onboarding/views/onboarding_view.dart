@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../controllers/onboarding_controller.dart';
 import '../models/onboarding_data.dart';
 import '../widgets/step_indicator.dart';
@@ -154,7 +153,7 @@ class OnboardingView extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Cancel',
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF3D60D8),
@@ -401,7 +400,7 @@ class _GoalStep extends StatelessWidget {
               Text(
                 'What is your\nmain goal?',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'PlusJakartaSans', 
                   fontSize: 30,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -412,7 +411,7 @@ class _GoalStep extends StatelessWidget {
               Text(
                 'Select the option that fits your situation',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'PlusJakartaSans', 
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                   color: Colors.white.withValues(alpha: 0.75),
@@ -484,7 +483,7 @@ class _GoalPill extends StatelessWidget {
             child: Center(
               child: Text(
                 label,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'PlusJakartaSans', 
                   fontSize: 15,
                   fontWeight:
                       isSelected ? FontWeight.w700 : FontWeight.w500,

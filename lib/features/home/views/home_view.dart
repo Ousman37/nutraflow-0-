@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/circular_nutrition_progress.dart';
 import '../widgets/weekday_selector.dart';
 import '../../meal/models/meal_model.dart';
-import '../../analytics/views/analytics_view.dart';
-import '../../journal/views/journal_view.dart';
+import '../../meals/views/meals_view.dart';
+import '../../workouts/views/workouts_view.dart';
+import '../../progress/views/progress_view.dart';
 import '../../subscription/controllers/subscription_controller.dart';
 import '../../rewards/widgets/reward_progress_card.dart';
-import '../../profile/views/profile_view.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../routes/app_routes.dart';
 
@@ -93,9 +92,9 @@ class HomeView extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           _TabBody(ctrl: ctrl, tabIndex: 0, child: _HomeTab(ctrl: ctrl)),
-          _TabBody(ctrl: ctrl, tabIndex: 1, child: const AnalyticsView()),
-          _TabBody(ctrl: ctrl, tabIndex: 2, child: const ProfileView()),
-          _TabBody(ctrl: ctrl, tabIndex: 3, child: const JournalView()),
+          _TabBody(ctrl: ctrl, tabIndex: 1, child: const MealsView()),
+          _TabBody(ctrl: ctrl, tabIndex: 2, child: const WorkoutsView()),
+          _TabBody(ctrl: ctrl, tabIndex: 3, child: const ProgressView()),
         ],
       ),
       bottomNavigationBar: _FloatingNav(ctrl: ctrl),
@@ -167,60 +166,78 @@ class _FloatingNav extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
+                // Dashboard
                 Obx(() => _NavIcon(
-                      icon: Icons.calendar_month_outlined,
+                      icon: Icons.home_rounded,
+                      label: 'Home',
                       isActive: ctrl.selectedTabIndex.value == 0,
                       onTap: () {
                         HapticFeedback.selectionClick();
                         ctrl.selectedTabIndex.value = 0;
                       },
                     )),
+                // Meals
                 Obx(() => _NavIcon(
-                      icon: Icons.trending_up_rounded,
+                      icon: Icons.restaurant_rounded,
+                      label: 'Meals',
                       isActive: ctrl.selectedTabIndex.value == 1,
                       onTap: () {
-                        if (!Get.find<SubscriptionController>().requirePro()) {
-                          return;
-                        }
                         HapticFeedback.selectionClick();
                         ctrl.selectedTabIndex.value = 1;
                       },
                     )),
-                // Centre FAB — translated upward so it protrudes above the bar.
+                // Centre FAB — opens scanner.
                 Transform.translate(
                   offset: const Offset(0, -12),
                   child: _PressScale(
                     scale: 0.88,
-                    onTap: () async {
+                    onTap: () {
                       HapticFeedback.mediumImpact();
-                      final result =
-                          await Get.toNamed(AppRoutes.selectMethod);
-                      if (result == true) ctrl.refresh();
+                      Get.toNamed(AppRoutes.scanner);
                     },
                     child: Container(
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: AppColors.warning,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3CB54A), Color(0xFF1A7A38)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.warning.withValues(alpha: 0.45),
+                            color: AppColors.primary.withValues(alpha: 0.45),
                             blurRadius: 14,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: const Icon(
-                        Icons.add_rounded,
+                        Icons.qr_code_scanner_rounded,
                         color: Colors.white,
-                        size: 28,
+                        size: 26,
                       ),
                     ),
                   ),
                 ),
+                // Workouts
                 Obx(() => _NavIcon(
-                      icon: Icons.history_rounded,
+                      icon: Icons.fitness_center_rounded,
+                      label: 'Workouts',
+                      isActive: ctrl.selectedTabIndex.value == 2,
+                      onTap: () {
+                        if (!Get.find<SubscriptionController>().requirePro()) {
+                          return;
+                        }
+                        HapticFeedback.selectionClick();
+                        ctrl.selectedTabIndex.value = 2;
+                      },
+                    )),
+                // Progress
+                Obx(() => _NavIcon(
+                      icon: Icons.bar_chart_rounded,
+                      label: 'Progress',
                       isActive: ctrl.selectedTabIndex.value == 3,
                       onTap: () {
                         if (!Get.find<SubscriptionController>().requirePro()) {
@@ -228,14 +245,6 @@ class _FloatingNav extends StatelessWidget {
                         }
                         HapticFeedback.selectionClick();
                         ctrl.selectedTabIndex.value = 3;
-                      },
-                    )),
-                Obx(() => _NavIcon(
-                      icon: Icons.person_outline_rounded,
-                      isActive: ctrl.selectedTabIndex.value == 2,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        ctrl.selectedTabIndex.value = 2;
                       },
                     )),
               ],
@@ -252,11 +261,13 @@ class _FloatingNav extends StatelessWidget {
 // Nav icon with animated scale-up + colour brightening + active dot indicator.
 class _NavIcon extends StatelessWidget {
   final IconData icon;
+  final String label;
   final bool isActive;
   final VoidCallback onTap;
 
   const _NavIcon({
     required this.icon,
+    required this.label,
     required this.isActive,
     required this.onTap,
   });
@@ -267,13 +278,13 @@ class _NavIcon extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 44,
-        height: 44,
+        width: 52,
+        height: 56,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedScale(
-              scale: isActive ? 1.18 : 1.0,
+              scale: isActive ? 1.12 : 1.0,
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutBack,
               child: TweenAnimationBuilder<double>(
@@ -290,16 +301,16 @@ class _NavIcon extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 4),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              width: isActive ? 4.0 : 0.0,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.75),
-                borderRadius: BorderRadius.circular(2),
+            const SizedBox(height: 3),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 260),
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 9,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                color: Colors.white.withValues(alpha: isActive ? 1.0 : 0.38),
               ),
+              child: Text(label),
             ),
           ],
         ),
@@ -375,7 +386,7 @@ class _GreetingHeader extends StatelessWidget {
               children: [
                 Obx(() => Text(
                       'Hello, ${ctrl.userName}',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(fontFamily: 'PlusJakartaSans', 
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -385,7 +396,7 @@ class _GreetingHeader extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   "You're on track to...",
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
                     color: Colors.white.withValues(alpha: 0.72),
@@ -396,7 +407,10 @@ class _GreetingHeader extends StatelessWidget {
           ),
           _PressScale(
             scale: 0.92,
-            onTap: () => HapticFeedback.lightImpact(),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Get.toNamed(AppRoutes.profile);
+            },
             child: SizedBox(
               width: 44,
               height: 44,
@@ -409,7 +423,7 @@ class _GreetingHeader extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
-                    Icons.notifications_none_rounded,
+                    Icons.person_outline_rounded,
                     color: Colors.white,
                     size: 22,
                   ),
@@ -526,7 +540,7 @@ class _PanelHeader extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
@@ -535,7 +549,7 @@ class _PanelHeader extends StatelessWidget {
                   const SizedBox(height: 2),
                   Obx(() => Text(
                         '${ctrl.loggedMealCount}/3 • ${ctrl.mealTimeGap}',
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'PlusJakartaSans', 
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
                           color: AppColors.textSecondary,
@@ -622,7 +636,7 @@ class _MealRow extends StatelessWidget {
                         children: [
                           Text(
                             mealType.label,
-                            style: GoogleFonts.poppins(
+                            style: TextStyle(fontFamily: 'PlusJakartaSans', 
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
@@ -640,7 +654,7 @@ class _MealRow extends StatelessWidget {
                               ),
                               child: Text(
                                 '+${meal!.nutrition.score}',
-                                style: GoogleFonts.poppins(
+                                style: TextStyle(fontFamily: 'PlusJakartaSans', 
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.success,
@@ -653,7 +667,7 @@ class _MealRow extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         isLogged ? _buildSubtitle(meal!) : 'Tap to log meal',
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'PlusJakartaSans', 
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
                           color: AppColors.textSecondary,
@@ -724,7 +738,7 @@ class _MealRow extends StatelessWidget {
               child: Center(
                 child: Text(
                   _formatTime(meal!.createdAt),
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary,

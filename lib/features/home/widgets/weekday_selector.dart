@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../controllers/home_controller.dart';
 
 class WeekdaySelector extends StatelessWidget {
@@ -45,7 +44,7 @@ class WeekdaySelector extends StatelessWidget {
                       child: Center(
                         child: Text(
                           _labels[i],
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'PlusJakartaSans', 
                             fontSize: 12,
                             fontWeight: isSelected
                                 ? FontWeight.w700

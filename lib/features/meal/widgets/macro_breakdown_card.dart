@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/nutrition_analysis.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -37,6 +38,7 @@ class MacroBreakdownCard extends StatelessWidget {
                   percent: nutrition.proteinPercent,
                   color: AppColors.proteinColor,
                   unit: 'g',
+                  icon: PhosphorIcons.fish(),
                 ),
               ),
               Expanded(
@@ -46,6 +48,7 @@ class MacroBreakdownCard extends StatelessWidget {
                   percent: nutrition.carbsPercent,
                   color: AppColors.carbsColor,
                   unit: 'g',
+                  icon: PhosphorIcons.grains(),
                 ),
               ),
               Expanded(
@@ -55,6 +58,7 @@ class MacroBreakdownCard extends StatelessWidget {
                   percent: nutrition.fatPercent,
                   color: AppColors.fatColor,
                   unit: 'g',
+                  icon: PhosphorIcons.drop(),
                 ),
               ),
             ],
@@ -76,6 +80,7 @@ class _MacroCircle extends StatelessWidget {
   final double percent;
   final Color color;
   final String unit;
+  final PhosphorIconData icon;
 
   const _MacroCircle({
     required this.label,
@@ -83,12 +88,15 @@ class _MacroCircle extends StatelessWidget {
     required this.percent,
     required this.color,
     required this.unit,
+    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        PhosphorIcon(icon, size: 20, color: color.withValues(alpha: 0.75)),
+        const SizedBox(height: 6),
         SizedBox(
           width: 68,
           height: 68,
@@ -141,9 +149,15 @@ class _CalorieRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Total Calories',
-            style: AppTextStyles.labelLarge.copyWith(color: Colors.white),
+          Row(
+            children: [
+              PhosphorIcon(PhosphorIcons.flame(), size: 18, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(
+                'Total Calories',
+                style: AppTextStyles.labelLarge.copyWith(color: Colors.white),
+              ),
+            ],
           ),
           Text(
             '${nutrition.calories.round()} kcal',
@@ -166,14 +180,7 @@ class _FiberRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                color: AppColors.fiberColor,
-                shape: BoxShape.circle,
-              ),
-            ),
+            PhosphorIcon(PhosphorIcons.leaf(), size: 16, color: AppColors.fiberColor),
             const SizedBox(width: 8),
             Text('Fiber', style: AppTextStyles.labelMedium),
           ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/nutrition_analysis.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -16,6 +17,18 @@ class RainbowIndicator extends StatelessWidget {
     'Blue/Purple': Color(0xFF7B6CF8),
     'White/Brown': Color(0xFFBDAA8A),
   };
+
+  static PhosphorIconData _iconForColor(String colorName) {
+    switch (colorName) {
+      case 'Red':         return PhosphorIcons.pepper();
+      case 'Orange':      return PhosphorIcons.orange();
+      case 'Yellow':      return PhosphorIcons.sun();
+      case 'Green':       return PhosphorIcons.leaf();
+      case 'Blue/Purple': return PhosphorIcons.drop();
+      case 'White/Brown': return PhosphorIcons.bread();
+      default:            return PhosphorIcons.circle();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +50,12 @@ class RainbowIndicator extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('🌈 ', style: const TextStyle(fontSize: 18)),
+              PhosphorIcon(
+                PhosphorIcons.rainbow(),
+                size: 22,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
               Text('Eat the Rainbow', style: AppTextStyles.headlineSmall),
             ],
           ),
@@ -52,7 +70,8 @@ class RainbowIndicator extends StatelessWidget {
             runSpacing: 10,
             children: colorGroups.map((group) {
               final color = _colorMap[group.color] ?? AppColors.primary;
-              return _ColorGroupChip(group: group, color: color);
+              final icon = _iconForColor(group.color);
+              return _ColorGroupChip(group: group, color: color, icon: icon);
             }).toList(),
           ),
         ],
@@ -64,8 +83,13 @@ class RainbowIndicator extends StatelessWidget {
 class _ColorGroupChip extends StatelessWidget {
   final ColorGroup group;
   final Color color;
+  final PhosphorIconData icon;
 
-  const _ColorGroupChip({required this.group, required this.color});
+  const _ColorGroupChip({
+    required this.group,
+    required this.color,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -87,13 +111,10 @@ class _ColorGroupChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: group.present ? color : AppColors.textHint,
-                shape: BoxShape.circle,
-              ),
+            PhosphorIcon(
+              icon,
+              size: 14,
+              color: group.present ? color : AppColors.textHint,
             ),
             const SizedBox(width: 6),
             Text(

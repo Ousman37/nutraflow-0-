@@ -2,13 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
 import '../../../routes/app_routes.dart';
 import '../controllers/welcome_controller.dart';
 
-// Pill data: (label, icon)
 typedef _Pill = (String, PhosphorIconData);
 
 final _rows = <List<_Pill>>[
@@ -59,9 +58,11 @@ class WelcomeView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 40),
+            const SizedBox(height: 24),
+            _LogoHeader(),
+            const SizedBox(height: 28),
             _buildHeadline(),
-            const SizedBox(height: 36),
+            const SizedBox(height: 32),
             _buildPillRows(ctrl),
             const Spacer(),
             _buildCTAs(ctrl),
@@ -77,14 +78,12 @@ class WelcomeView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: RichText(
         text: TextSpan(
-          style: GoogleFonts.poppins(
-            fontSize: 36,
-            fontWeight: FontWeight.w800,
+          style: AppTextStyles.displayLarge.copyWith(
             color: AppColors.textPrimary,
-            height: 1.15,
+            height: 1.18,
           ),
-          children: const [
-            TextSpan(text: "Let's make\n"),
+          children: [
+            const TextSpan(text: "Let's make\n"),
             TextSpan(
               text: 'your days',
               style: TextStyle(
@@ -92,7 +91,7 @@ class WelcomeView extends StatelessWidget {
                 color: AppColors.primary,
               ),
             ),
-            TextSpan(text: '\nhealthier'),
+            const TextSpan(text: '\nhealthier'),
           ],
         ),
       ),
@@ -123,23 +122,21 @@ class WelcomeView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
         children: [
-          _DarkButton(
+          _GreenButton(
             ctrl: ctrl,
             onTap: () => Get.toNamed(
               AppRoutes.signup,
               arguments: {'interests': ctrl.selectedCategories.toList()},
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           GestureDetector(
             onTap: () => Get.toNamed(AppRoutes.login),
             behavior: HitTestBehavior.opaque,
             child: Center(
               child: Text(
                 'I Already Have an Account',
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                style: AppTextStyles.labelLarge.copyWith(
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -151,9 +148,24 @@ class WelcomeView extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Auto-scrolling pill row
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Logo header ─────────────────────────────────────────────────────────────
+
+class _LogoHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Image.asset(
+        'assets/images/logo.png',
+        height: 52,
+        fit: BoxFit.contain,
+        alignment: Alignment.centerLeft,
+      ),
+    );
+  }
+}
+
+// ─── Auto-scrolling pill row ──────────────────────────────────────────────────
 
 class _AutoScrollRow extends StatefulWidget {
   final List<_Pill> pills;
@@ -249,9 +261,7 @@ class _AutoScrollRowState extends State<_AutoScrollRow> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Pill widget — reactive, multi-selectable
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Pill widget ──────────────────────────────────────────────────────────────
 
 class _PillWidget extends StatelessWidget {
   final String label;
@@ -277,17 +287,17 @@ class _PillWidget extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.primary.withValues(alpha: 0.10)
+                ? AppColors.primary.withValues(alpha: 0.08)
                 : Colors.white,
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: selected ? AppColors.primary : const Color(0xFFE2E5F0),
+              color: selected ? AppColors.primary : const Color(0xFFDEEDE3),
               width: selected ? 1.8 : 1.2,
             ),
             boxShadow: [
               BoxShadow(
                 color: selected
-                    ? AppColors.primary.withValues(alpha: 0.18)
+                    ? AppColors.primary.withValues(alpha: 0.15)
                     : Colors.black.withValues(alpha: 0.04),
                 blurRadius: selected ? 10 : 8,
                 offset: const Offset(0, 2),
@@ -306,8 +316,7 @@ class _PillWidget extends StatelessWidget {
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOut,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
+                style: AppTextStyles.labelMedium.copyWith(
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected ? AppColors.primary : AppColors.textPrimary,
                 ),
@@ -338,15 +347,13 @@ class _PillWidget extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Dark CTA button — shows live selection count
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Get Started button ───────────────────────────────────────────────────────
 
-class _DarkButton extends StatelessWidget {
+class _GreenButton extends StatelessWidget {
   final WelcomeController ctrl;
   final VoidCallback onTap;
 
-  const _DarkButton({required this.ctrl, required this.onTap});
+  const _GreenButton({required this.ctrl, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -360,13 +367,17 @@ class _DarkButton extends StatelessWidget {
         width: double.infinity,
         height: 58,
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1D2E),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF3CB54A), Color(0xFF1A7A38)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.20),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: AppColors.primary.withValues(alpha: 0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -380,11 +391,7 @@ class _DarkButton extends StatelessWidget {
               child: Text(
                 label,
                 key: ValueKey(label),
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+                style: AppTextStyles.buttonText,
               ),
             ),
           );

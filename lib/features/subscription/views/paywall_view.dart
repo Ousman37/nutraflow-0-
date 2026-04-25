@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../controllers/subscription_controller.dart';
 import '../../../core/constants/app_colors.dart';
 
@@ -167,7 +166,7 @@ class _BrandHeader extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           'NUTRAFLOW PRO',
-          style: GoogleFonts.poppins(
+          style: TextStyle(fontFamily: 'PlusJakartaSans', 
             fontSize: 12,
             fontWeight: FontWeight.w700,
             color: AppColors.primary.withValues(alpha: 0.85),
@@ -178,7 +177,7 @@ class _BrandHeader extends StatelessWidget {
         Text(
           'Unlock Your Full\nNutrition Potential',
           textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(
+          style: TextStyle(fontFamily: 'PlusJakartaSans', 
             fontSize: 29,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -189,7 +188,7 @@ class _BrandHeader extends StatelessWidget {
         Text(
           'Everything you need to eat smarter,\nmove better, and build lasting habits.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(
+          style: TextStyle(fontFamily: 'PlusJakartaSans', 
             fontSize: 13.5,
             color: Colors.white.withValues(alpha: 0.50),
             height: 1.55,
@@ -293,7 +292,7 @@ class _BenefitRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -301,7 +300,7 @@ class _BenefitRow extends StatelessWidget {
                 ),
                 Text(
                   subtitle,
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
                     fontSize: 11.5,
                     color: Colors.white.withValues(alpha: 0.48),
                     height: 1.4,
@@ -453,7 +452,7 @@ class _PlanTile extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'PlusJakartaSans', 
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -470,7 +469,7 @@ class _PlanTile extends StatelessWidget {
                           ),
                           child: Text(
                             badge!,
-                            style: GoogleFonts.poppins(
+                            style: TextStyle(fontFamily: 'PlusJakartaSans', 
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -483,7 +482,7 @@ class _PlanTile extends StatelessWidget {
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 11,
                       color: Colors.white.withValues(alpha: 0.45),
                     ),
@@ -497,7 +496,7 @@ class _PlanTile extends StatelessWidget {
               children: [
                 Text(
                   price,
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
@@ -506,7 +505,7 @@ class _PlanTile extends StatelessWidget {
                 if (savingsLabel != null)
                   Text(
                     savingsLabel!,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: AppColors.accent,
@@ -515,7 +514,7 @@ class _PlanTile extends StatelessWidget {
                 else
                   Text(
                     perPeriod,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
                       fontSize: 10,
                       color: Colors.white.withValues(alpha: 0.40),
                     ),
@@ -601,7 +600,7 @@ class _BottomActions extends StatelessWidget {
                           ctrl.selectedPlan.value == 'yearly'
                               ? 'Get Yearly · ${ctrl.yearlyPriceString.value}'
                               : 'Get Monthly · ${ctrl.monthlyPriceString.value}',
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(fontFamily: 'PlusJakartaSans', 
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -632,7 +631,7 @@ class _BottomActions extends StatelessWidget {
                       )
                     : Text(
                         'Restore Purchases',
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(fontFamily: 'PlusJakartaSans', 
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: Colors.white.withValues(alpha: 0.50),
@@ -647,7 +646,7 @@ class _BottomActions extends StatelessWidget {
           Text(
             'Subscription renews automatically. Cancel anytime in App Store / Google Play settings.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'PlusJakartaSans', 
               fontSize: 10,
               color: Colors.white.withValues(alpha: 0.26),
               height: 1.5,

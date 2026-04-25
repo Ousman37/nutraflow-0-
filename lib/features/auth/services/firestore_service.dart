@@ -29,6 +29,15 @@ class FirestoreService {
     return doc.exists;
   }
 
+  // Persists the Pro subscription flag directly on the user document.
+  // Uses set+merge so it works even if the document doesn't exist yet.
+  Future<void> setProStatus(String userId, bool isPro) async {
+    await _users.doc(userId).set(
+      {'isProUser': isPro},
+      SetOptions(merge: true),
+    );
+  }
+
   Future<void> deleteUserData(String userId) async {
     final batch = _db.batch();
 

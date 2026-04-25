@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../controllers/reward_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../routes/app_routes.dart';
@@ -87,7 +86,7 @@ class _StreakBadge extends StatelessWidget {
           const Text('🔥', style: TextStyle(fontSize: 18)),
           Text(
             '$streak',
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'PlusJakartaSans', 
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: Colors.white,
@@ -114,7 +113,7 @@ class _ProgressInfo extends StatelessWidget {
         children: [
           Text(
             'All milestones unlocked! 🏆',
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'PlusJakartaSans', 
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: Colors.white,
@@ -123,7 +122,7 @@ class _ProgressInfo extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '$streak day streak — you\'re unstoppable',
-            style: GoogleFonts.poppins(
+            style: TextStyle(fontFamily: 'PlusJakartaSans', 
               fontSize: 11,
               color: Colors.white54,
             ),
@@ -149,7 +148,7 @@ class _ProgressInfo extends StatelessWidget {
             Expanded(
               child: Text(
                 info.title,
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'PlusJakartaSans', 
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -174,7 +173,7 @@ class _ProgressInfo extends StatelessWidget {
           daysLeft == 0
               ? 'Unlocking now…'
               : '$daysLeft day${daysLeft == 1 ? '' : 's'} to go',
-          style: GoogleFonts.poppins(
+          style: TextStyle(fontFamily: 'PlusJakartaSans', 
             fontSize: 11,
             color: Colors.white54,
           ),

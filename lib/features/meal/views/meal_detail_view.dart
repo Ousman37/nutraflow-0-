@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../controllers/meal_detail_controller.dart';
 import '../models/meal_model.dart';
 import '../models/nutrition_analysis.dart';
@@ -342,7 +341,7 @@ class _GlowScoreBubble extends StatelessWidget {
             child: Center(
               child: Text(
                 '+$level',
-                style: GoogleFonts.poppins(
+                style: TextStyle(fontFamily: 'PlusJakartaSans', 
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
