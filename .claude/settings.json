@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter build *)",
+      "Bash(grep -v \"^$\")",
+      "Read(//Library/Developer/CoreSimulator/Profiles/**)",
+      "Read(//Users/ethmane.dev/Library/Developer/CoreSimulator/Profiles/**)"
+    ]
+  }
+}

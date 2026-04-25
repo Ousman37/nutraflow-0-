@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "157447885473",
+    "project_id": "nutraflow-199ae",
+    "storage_bucket": "nutraflow-199ae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:157447885473:android:543affebb40c670f0856e0",
+        "android_client_info": {
+          "package_name": "com.ethan.nutraflow"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "157447885473-bsr3mmu7tleo29fv91j30jduqlm5nt0s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDs1CPvtL3j5l4prb_9rTGwjFkJ4FE-tWk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "157447885473-bsr3mmu7tleo29fv91j30jduqlm5nt0s.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "157447885473-3ed5u45h1naor93co83bo74mnd50rtrg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ethan.nutraflow"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:157447885473:android:da84d82e5ac91d080856e0",
+        "android_client_info": {
+          "package_name": "com.example.nutraflow"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "157447885473-bsr3mmu7tleo29fv91j30jduqlm5nt0s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDs1CPvtL3j5l4prb_9rTGwjFkJ4FE-tWk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "157447885473-bsr3mmu7tleo29fv91j30jduqlm5nt0s.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "157447885473-3ed5u45h1naor93co83bo74mnd50rtrg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ethan.nutraflow"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
