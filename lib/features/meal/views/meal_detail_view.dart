@@ -341,7 +341,7 @@ class _GlowScoreBubble extends StatelessWidget {
             child: Center(
               child: Text(
                 '+$level',
-                style: TextStyle(fontFamily: 'PlusJakartaSans', 
+                style: TextStyle(fontFamily: 'PlusJakartaSans',
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
@@ -428,8 +428,8 @@ class _MealPreviewCard extends StatelessWidget {
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => _ImagePlaceholder(meal: meal),
-                    errorWidget: (_, __, ___) => _ImagePlaceholder(meal: meal),
+                    placeholder: (_, _) => _ImagePlaceholder(meal: meal),
+                    errorWidget: (_, _, _) => _ImagePlaceholder(meal: meal),
                   )
                 : _ImagePlaceholder(meal: meal),
           ),

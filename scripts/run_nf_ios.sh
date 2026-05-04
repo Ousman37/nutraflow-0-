@@ -49,7 +49,17 @@ else
   echo "🆔  UDID: $DEVICE_ID"
 fi
 
+# Boot only this device (no-op if already booted)
 xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
-open -a Simulator
+
+# Open Simulator.app focused on THIS device — won't disturb other running simulators
+open -a Simulator --args -CurrentDeviceUDID "$DEVICE_ID"
+
+# Wait until the device reports "Booted" before handing off to flutter
+echo "⏳  Waiting for simulator to finish booting..."
+until xcrun simctl list devices 2>/dev/null | grep "$DEVICE_ID" | grep -q "Booted"; do
+  sleep 1
+done
+echo "✅  Simulator ready."
 
 flutter run -d "$DEVICE_ID"
