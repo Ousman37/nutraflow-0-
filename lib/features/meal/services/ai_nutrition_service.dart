@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
+import 'package:http/http.dart' as http;
 import '../models/nutrition_analysis.dart';
+import '../../../core/config/api_config.dart';
 
-/// Mock AI nutrition service — replace with real OpenAI/Claude API call.
 class AINutritionService {
   final _rng = Random();
 
@@ -10,12 +13,157 @@ class AINutritionService {
     String? description,
     String? imagePath,
   }) async {
-    // Simulate network latency
-    await Future.delayed(const Duration(milliseconds: 1800));
+    final hasKey = ApiConfig.claudeApiKey.isNotEmpty &&
+        ApiConfig.claudeApiKey != 'YOUR_API_KEY_HERE';
 
-    final input = (description ?? '').toLowerCase();
-    return _estimateFromKeywords(input);
+    if (imagePath != null && hasKey) {
+      try {
+        return await _analyzeWithClaude(
+          imagePath: imagePath,
+          description: description,
+        );
+      } catch (_) {
+        // Fall back to mock if the API call fails
+      }
+    }
+
+    await Future.delayed(const Duration(milliseconds: 1800));
+    return _estimateFromKeywords((description ?? '').toLowerCase());
   }
+
+  Future<NutritionAnalysis> _analyzeWithClaude({
+    required String imagePath,
+    String? description,
+  }) async {
+    final bytes = await File(imagePath).readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    final ext = imagePath.split('.').last.toLowerCase();
+    final mediaType = ext == 'png'
+        ? 'image/png'
+        : ext == 'webp'
+            ? 'image/webp'
+            : 'image/jpeg';
+
+    final promptBuf = StringBuffer(
+      'Analyze this food/meal image and estimate its nutritional content.',
+    );
+    if (description != null && description.isNotEmpty) {
+      promptBuf.write(' The user described it as: "$description".');
+    }
+    promptBuf.write('''
+
+Return ONLY valid JSON — no markdown, no extra text:
+{
+  "calories": <number>,
+  "proteinG": <number>,
+  "carbsG": <number>,
+  "fatG": <number>,
+  "fiberG": <number>,
+  "score": <integer 0-100 representing overall nutritional quality>,
+  "feedback": "<one concise sentence assessing this meal>",
+  "suggestions": ["<actionable tip 1>", "<actionable tip 2>", "<actionable tip 3>"],
+  "colorGroups": {
+    "red": <true/false — red fruits/vegetables present>,
+    "orange": <true/false — orange vegetables present>,
+    "yellow": <true/false — yellow fruits/vegetables present>,
+    "green": <true/false — green vegetables present>,
+    "bluePurple": <true/false — blue or purple produce present>,
+    "whiteBrown": <true/false — grains or protein present>
+  }
+}''');
+
+    final response = await http
+        .post(
+          Uri.parse('https://api.anthropic.com/v1/messages'),
+          headers: {
+            'x-api-key': ApiConfig.claudeApiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: jsonEncode({
+            'model': ApiConfig.claudeModel,
+            'max_tokens': 512,
+            'messages': [
+              {
+                'role': 'user',
+                'content': [
+                  {
+                    'type': 'image',
+                    'source': {
+                      'type': 'base64',
+                      'media_type': mediaType,
+                      'data': base64Image,
+                    },
+                  },
+                  {
+                    'type': 'text',
+                    'text': promptBuf.toString(),
+                  },
+                ],
+              }
+            ],
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode != 200) {
+      throw Exception('Claude API error ${response.statusCode}: ${response.body}');
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final text = (body['content'] as List).first['text'] as String;
+
+    // Strip any accidental markdown code fences
+    final cleaned = text.replaceAll(RegExp(r'```[a-z]*'), '').trim();
+    final n = jsonDecode(cleaned) as Map<String, dynamic>;
+    final cg = n['colorGroups'] as Map<String, dynamic>;
+
+    return NutritionAnalysis(
+      calories: (n['calories'] as num).toDouble(),
+      proteinG: (n['proteinG'] as num).toDouble(),
+      carbsG: (n['carbsG'] as num).toDouble(),
+      fatG: (n['fatG'] as num).toDouble(),
+      fiberG: (n['fiberG'] as num).toDouble(),
+      score: (n['score'] as num).toInt().clamp(0, 100),
+      feedback: n['feedback'] as String,
+      suggestions: List<String>.from(n['suggestions'] ?? []),
+      colorGroups: [
+        ColorGroup(
+          color: 'Red',
+          foodName: 'Tomatoes / Berries',
+          present: cg['red'] as bool? ?? false,
+        ),
+        ColorGroup(
+          color: 'Orange',
+          foodName: 'Carrots / Sweet Potato',
+          present: cg['orange'] as bool? ?? false,
+        ),
+        ColorGroup(
+          color: 'Yellow',
+          foodName: 'Banana / Corn',
+          present: cg['yellow'] as bool? ?? false,
+        ),
+        ColorGroup(
+          color: 'Green',
+          foodName: 'Vegetables / Avocado',
+          present: cg['green'] as bool? ?? false,
+        ),
+        ColorGroup(
+          color: 'Blue/Purple',
+          foodName: 'Blueberries / Eggplant',
+          present: cg['bluePurple'] as bool? ?? false,
+        ),
+        ColorGroup(
+          color: 'White/Brown',
+          foodName: 'Grains / Protein',
+          present: cg['whiteBrown'] as bool? ?? false,
+        ),
+      ],
+    );
+  }
+
+  // ── Mock fallback ─────────────────────────────────────────────────────────
 
   NutritionAnalysis _estimateFromKeywords(String input) {
     double calories = 400 + _rng.nextDouble() * 300;
@@ -24,7 +172,6 @@ class AINutritionService {
     double fat = 10 + _rng.nextDouble() * 20;
     double fiber = 2 + _rng.nextDouble() * 8;
 
-    // Adjust based on keywords
     if (_contains(input, ['salad', 'vegetables', 'veggies', 'greens'])) {
       calories = 150 + _rng.nextDouble() * 150;
       protein = 8 + _rng.nextDouble() * 12;
@@ -64,10 +211,6 @@ class AINutritionService {
     }
 
     final score = _calculateScore(calories, protein, carbs, fat);
-    final feedback = _generateFeedback(score, protein, carbs, fat);
-    final suggestions = _generateSuggestions(protein, carbs, fat, fiber);
-    final colorGroups = _detectColorGroups(input);
-
     return NutritionAnalysis(
       calories: calories,
       proteinG: protein,
@@ -75,28 +218,22 @@ class AINutritionService {
       fatG: fat,
       fiberG: fiber,
       score: score,
-      feedback: feedback,
-      suggestions: suggestions,
-      colorGroups: colorGroups,
+      feedback: _generateFeedback(score, protein, carbs, fat),
+      suggestions: _generateSuggestions(protein, carbs, fat, fiber),
+      colorGroups: _detectColorGroups(input),
     );
   }
 
   bool _contains(String input, List<String> keywords) =>
       keywords.any((k) => input.contains(k));
 
-  int _calculateScore(
-    double cal,
-    double protein,
-    double carbs,
-    double fat,
-  ) {
+  int _calculateScore(double cal, double protein, double carbs, double fat) {
     int score = 50;
     final totalCal = (protein * 4) + (carbs * 4) + (fat * 9);
     if (totalCal > 0) {
       final protRatio = (protein * 4) / totalCal;
       final carbRatio = (carbs * 4) / totalCal;
       final fatRatio = (fat * 9) / totalCal;
-
       if (protRatio >= 0.25 && protRatio <= 0.40) score += 20;
       if (carbRatio >= 0.40 && carbRatio <= 0.55) score += 15;
       if (fatRatio >= 0.20 && fatRatio <= 0.35) score += 15;
@@ -150,17 +287,20 @@ class AINutritionService {
       ColorGroup(
         color: 'Green',
         foodName: 'Vegetables / Avocado',
-        present: _contains(input, ['green', 'spinach', 'broccoli', 'avocado', 'salad', 'kale']),
+        present: _contains(
+            input, ['green', 'spinach', 'broccoli', 'avocado', 'salad', 'kale']),
       ),
       ColorGroup(
         color: 'Blue/Purple',
         foodName: 'Blueberries / Eggplant',
-        present: _contains(input, ['blueberry', 'blueberries', 'eggplant', 'grape', 'plum']),
+        present: _contains(
+            input, ['blueberry', 'blueberries', 'eggplant', 'grape', 'plum']),
       ),
       ColorGroup(
         color: 'White/Brown',
         foodName: 'Grains / Protein',
-        present: _contains(input, ['rice', 'bread', 'pasta', 'oat', 'chicken', 'fish', 'egg']),
+        present: _contains(
+            input, ['rice', 'bread', 'pasta', 'oat', 'chicken', 'fish', 'egg']),
       ),
     ];
   }
