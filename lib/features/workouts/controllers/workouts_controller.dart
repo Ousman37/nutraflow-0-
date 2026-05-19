@@ -81,6 +81,12 @@ class WorkoutsController extends GetxController {
     return d.year == now.year && d.month == now.month && d.day == now.day;
   }
 
+  List<DateTime> get currentWeekDays {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return List.generate(7, (i) => monday.add(Duration(days: i)));
+  }
+
   int get totalMinutes =>
       workouts.fold(0, (sum, w) => sum + w.durationMinutes);
 

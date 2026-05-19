@@ -1,21 +1,19 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import '../controllers/home_controller.dart';
-import '../widgets/circular_nutrition_progress.dart';
-import '../widgets/weekday_selector.dart';
-import '../../meal/models/meal_model.dart';
 import '../../meals/views/meals_view.dart';
 import '../../workouts/views/workouts_view.dart';
+import '../../workouts/controllers/workouts_controller.dart';
 import '../../progress/views/progress_view.dart';
 import '../../subscription/controllers/subscription_controller.dart';
-import '../../rewards/widgets/reward_progress_card.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../routes/app_routes.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reusable spring press — wraps any child with a scale-down-on-press animation
+// Reusable spring press
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PressScale extends StatefulWidget {
@@ -102,7 +100,6 @@ class HomeView extends StatelessWidget {
   }
 }
 
-// Each tab owns its Obx — only its thin wrapper rebuilds on tab switch, not the child content.
 class _TabBody extends StatelessWidget {
   final HomeController ctrl;
   final int tabIndex;
@@ -141,8 +138,6 @@ class _FloatingNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    // Container decoration never changes — no Obx needed here.
-    // Individual _NavIcon wrappers use Obx to react to tab changes only.
     return Container(
       decoration: BoxDecoration(
         color: AppColors.navBarDark,
@@ -166,7 +161,6 @@ class _FloatingNav extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Dashboard
                 Obx(() => _NavIcon(
                       icon: Icons.home_rounded,
                       label: 'Home',
@@ -176,7 +170,6 @@ class _FloatingNav extends StatelessWidget {
                         ctrl.selectedTabIndex.value = 0;
                       },
                     )),
-                // Meals
                 Obx(() => _NavIcon(
                       icon: Icons.restaurant_rounded,
                       label: 'Meals',
@@ -186,7 +179,6 @@ class _FloatingNav extends StatelessWidget {
                         ctrl.selectedTabIndex.value = 1;
                       },
                     )),
-                // Centre FAB — opens scanner.
                 Transform.translate(
                   offset: const Offset(0, -12),
                   child: _PressScale(
@@ -221,7 +213,6 @@ class _FloatingNav extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Workouts
                 Obx(() => _NavIcon(
                       icon: Icons.fitness_center_rounded,
                       label: 'Workouts',
@@ -234,7 +225,6 @@ class _FloatingNav extends StatelessWidget {
                         ctrl.selectedTabIndex.value = 2;
                       },
                     )),
-                // Progress
                 Obx(() => _NavIcon(
                       icon: Icons.bar_chart_rounded,
                       label: 'Progress',
@@ -250,7 +240,6 @@ class _FloatingNav extends StatelessWidget {
               ],
             ),
           ),
-          // Safe-area filler — fills home-indicator region with same dark colour.
           SizedBox(height: bottomInset),
         ],
       ),
@@ -258,7 +247,6 @@ class _FloatingNav extends StatelessWidget {
   }
 }
 
-// Nav icon with animated scale-up + colour brightening + active dot indicator.
 class _NavIcon extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -320,7 +308,7 @@ class _NavIcon extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main Home Tab
+// Main Home Tab — dashboard
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _HomeTab extends StatelessWidget {
@@ -329,38 +317,31 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: AppColors.dashboardGradient,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-        ),
-        SafeArea(
-          bottom: false,
-          child: Column(
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+    return ColoredBox(
+      color: AppColors.background,
+      child: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: ctrl.refresh,
+          color: AppColors.primary,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(20, 0, 20, bottomPad + 100),
             children: [
-              _GreetingHeader(ctrl: ctrl),
-              const SizedBox(height: 18),
-              Obx(() => CircularNutritionProgress(
-                    score: ctrl.dailyScore,
-                    caloriesConsumed: ctrl.totalCalories,
-                    caloriesTarget: ctrl.calorieTarget,
-                    encouragementText: ctrl.scoreEncouragement,
-                    levelText: ctrl.scoreLevel,
-                  )),
-              const SizedBox(height: 18),
-              WeekdaySelector(ctrl: ctrl),
+              _DashGreeting(ctrl: ctrl),
               const SizedBox(height: 16),
-              Expanded(child: _MealPanel(ctrl: ctrl)),
+              const _MotivationBanner(),
+              const SizedBox(height: 16),
+              _TodayStatusCard(ctrl: ctrl),
+              const SizedBox(height: 16),
+              const _WaterIntakeCard(),
+              const SizedBox(height: 16),
+              _QuickActivityGrid(ctrl: ctrl),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -369,14 +350,427 @@ class _HomeTab extends StatelessWidget {
 // Greeting header
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _GreetingHeader extends StatelessWidget {
+class _DashGreeting extends StatelessWidget {
   final HomeController ctrl;
-  const _GreetingHeader({required this.ctrl});
+  const _DashGreeting({required this.ctrl});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+      padding: const EdgeInsets.only(top: 18),
+      child: Row(
+        children: [
+          _PressScale(
+            scale: 0.92,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Get.toNamed(AppRoutes.profile);
+            },
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: AppColors.primaryGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.person_rounded, color: Colors.white, size: 24),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Welcome Back',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Obx(() => Text(
+                  ctrl.userName,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                )),
+              ],
+            ),
+          ),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: PhosphorIcon(
+              PhosphorIcons.bell(),
+              size: 20,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Today's Status Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TodayStatusCard extends StatelessWidget {
+  final HomeController ctrl;
+  const _TodayStatusCard({required this.ctrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Today's Status",
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Obx(() => Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _CalorieRingWidget(
+                consumed: ctrl.totalCalories,
+                target: ctrl.calorieTarget,
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  children: [
+                    _MacroProgressRow(
+                      label: 'Protein',
+                      current: ctrl.totalProtein,
+                      target: ctrl.proteinTarget,
+                      color: AppColors.proteinColor,
+                    ),
+                    const SizedBox(height: 14),
+                    _MacroProgressRow(
+                      label: 'Fat',
+                      current: ctrl.totalFat,
+                      target: ctrl.fatTarget,
+                      color: AppColors.fatColor,
+                    ),
+                    const SizedBox(height: 14),
+                    _MacroProgressRow(
+                      label: 'Carbs',
+                      current: ctrl.totalCarbs,
+                      target: ctrl.carbsTarget,
+                      color: AppColors.carbsColor,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Animated calorie ring
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CalorieRingWidget extends StatefulWidget {
+  final double consumed;
+  final double target;
+  const _CalorieRingWidget({required this.consumed, required this.target});
+
+  @override
+  State<_CalorieRingWidget> createState() => _CalorieRingWidgetState();
+}
+
+class _CalorieRingWidgetState extends State<_CalorieRingWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1000),
+  );
+  late final Animation<double> _anim =
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_CalorieRingWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.consumed != widget.consumed) {
+      _ctrl
+        ..reset()
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = widget.target > 0
+        ? (widget.consumed / widget.target).clamp(0.0, 1.0)
+        : 0.0;
+
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, child) {
+        final ap = progress * _anim.value;
+        final ac = (widget.consumed * _anim.value).round();
+        return SizedBox(
+          width: 112,
+          height: 112,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CustomPaint(
+                size: const Size(112, 112),
+                painter: _SmallRingPainter(progress: ap),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$ac',
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'of ${widget.target.round()}',
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const Text(
+                    'Consumed',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SmallRingPainter extends CustomPainter {
+  final double progress;
+  const _SmallRingPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Offset(size.width / 2, size.height / 2);
+    const stroke = 9.0;
+    final r = size.width / 2 - stroke / 2 - 3;
+
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..color = AppColors.divider
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke,
+    );
+
+    if (progress <= 0) return;
+
+    final sweepAngle = 2 * pi * progress;
+    final rect = Rect.fromCircle(center: c, radius: r);
+
+    canvas.drawArc(
+      rect,
+      -pi / 2,
+      sweepAngle,
+      false,
+      Paint()
+        ..shader = SweepGradient(
+          colors: const [Color(0xFF56C271), Color(0xFF1A7A38)],
+          startAngle: -pi / 2,
+          endAngle: -pi / 2 + 2 * pi,
+        ).createShader(rect)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round,
+    );
+
+    if (progress > 0.02) {
+      final tipAngle = -pi / 2 + sweepAngle;
+      final tip = Offset(
+        c.dx + r * cos(tipAngle),
+        c.dy + r * sin(tipAngle),
+      );
+      canvas.drawCircle(
+        tip,
+        stroke / 2 + 2,
+        Paint()
+          ..color = Colors.white
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
+      canvas.drawCircle(tip, stroke / 2 - 0.5, Paint()..color = AppColors.primary);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SmallRingPainter old) => old.progress != progress;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Macro progress bar row
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MacroProgressRow extends StatelessWidget {
+  final String label;
+  final double current;
+  final double target;
+  final Color color;
+
+  const _MacroProgressRow({
+    required this.label,
+    required this.current,
+    required this.target,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${current.round()}/${target.round()} g',
+              style: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: pct,
+            minHeight: 7,
+            backgroundColor: color.withValues(alpha: 0.12),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Water intake card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _WaterIntakeCard extends StatelessWidget {
+  const _WaterIntakeCard();
+
+  static const _totalGlasses = 8;
+  static const _filledGlasses = 0;
+  static const _mlConsumed = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -384,193 +778,65 @@ class _GreetingHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Obx(() => Text(
-                      'Hello, ${ctrl.userName}',
-                      style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        height: 1.15,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: const [
+                    Text(
+                      '$_mlConsumed ml',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        height: 1.0,
                       ),
-                    )),
-                const SizedBox(height: 2),
-                Text(
-                  "You're on track to...",
-                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white.withValues(alpha: 0.72),
-                  ),
+                    ),
+                    SizedBox(width: 8),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        'Water Consuming',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: List.generate(_totalGlasses, (i) {
+                    final filled = i < _filledGlasses;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: PhosphorIcon(
+                        PhosphorIcons.drop(
+                          filled
+                              ? PhosphorIconsStyle.fill
+                              : PhosphorIconsStyle.regular,
+                        ),
+                        size: 21,
+                        color: filled ? AppColors.primary : AppColors.divider,
+                      ),
+                    );
+                  }),
                 ),
               ],
             ),
           ),
-          _PressScale(
-            scale: 0.92,
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Get.toNamed(AppRoutes.profile);
-            },
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.person_outline_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// White rounded meal panel
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _MealPanel extends StatelessWidget {
-  final HomeController ctrl;
-  const _MealPanel({required this.ctrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 20,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 6),
-            width: 32,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFFDDE0EE),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          _PanelHeader(ctrl: ctrl),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: ctrl.refresh,
-              color: AppColors.primary,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                20, 4, 20,
-                MediaQuery.of(context).padding.bottom + 88,
-              ),
-                children: [
-                  const RewardProgressCard(),
-                  ...MealType.values
-                    .where((t) => t != MealType.snack)
-                    .map((type) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Obx(() => _MealRow(
-                                mealType: type,
-                                meal: ctrl.getMealByType(type),
-                                onTap: () async {
-                                  HapticFeedback.lightImpact();
-                                  final result = await Get.toNamed(
-                                    AppRoutes.selectMethod,
-                                    arguments: {'preselectedType': type},
-                                  );
-                                  if (result == true) ctrl.refresh();
-                                },
-                              )),
-                        ))
-                ,
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Panel header
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _PanelHeader extends StatelessWidget {
-  final HomeController ctrl;
-  const _PanelHeader({required this.ctrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Obx(() {
-              final date = ctrl.selectedDate;
-              final isToday = ctrl.selectedDateIsToday;
-              final label = isToday
-                  ? 'Today, ${DateFormat('d MMM yyyy').format(date)}'
-                  : DateFormat('EEE, d MMM yyyy').format(date);
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Obx(() => Text(
-                        '${ctrl.loggedMealCount}/3 • ${ctrl.mealTimeGap}',
-                        style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.textSecondary,
-                        ),
-                      )),
-                ],
-              );
-            }),
-          ),
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.inputFill,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.calendar_today_rounded,
-              size: 17,
+          const SizedBox(width: 12),
+          const Text(
+            'You drank $_filledGlasses of $_totalGlasses\nglasses of water',
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
               color: AppColors.textSecondary,
+              height: 1.6,
             ),
+            textAlign: TextAlign.end,
           ),
         ],
       ),
@@ -579,238 +845,320 @@ class _PanelHeader extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Meal row
+// Quick activity grid
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _MealRow extends StatelessWidget {
-  final MealType mealType;
-  final MealModel? meal;
-  final VoidCallback onTap;
+class _QuickActivityGrid extends StatelessWidget {
+  final HomeController ctrl;
+  const _QuickActivityGrid({required this.ctrl});
 
-  const _MealRow({
-    required this.mealType,
-    this.meal,
-    required this.onTap,
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Today's Activity",
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _ActivityTile(
+                icon: PhosphorIcons.personSimpleWalk(),
+                label: 'Walk',
+                value: '—',
+                unit: 'Steps',
+                bgColor: const Color(0xFFECF0FF),
+                iconColor: const Color(0xFF5C7CFA),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Obx(() {
+                int mins = 0;
+                try {
+                  mins = Get.find<WorkoutsController>()
+                      .workouts
+                      .fold(0, (s, w) => s + w.durationMinutes);
+                } catch (_) {}
+                return _ActivityTile(
+                  icon: PhosphorIcons.barbell(),
+                  label: 'Workouts',
+                  value: mins > 0 ? '$mins' : '—',
+                  unit: 'Minutes',
+                  bgColor: AppColors.inputFill,
+                  iconColor: AppColors.primary,
+                );
+              }),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _ActivityTile(
+                icon: PhosphorIcons.bed(),
+                label: 'Sleep',
+                value: '—',
+                unit: 'Hours',
+                bgColor: const Color(0xFFFFF5E6),
+                iconColor: const Color(0xFFF5A623),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Obx(() => _ActivityTile(
+                icon: PhosphorIcons.star(),
+                label: 'Daily Score',
+                value: '${ctrl.dailyScore}',
+                unit: 'Points',
+                bgColor: AppColors.inputFill,
+                iconColor: AppColors.primary,
+              )),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ActivityTile extends StatelessWidget {
+  final PhosphorIconData icon;
+  final String label;
+  final String value;
+  final String unit;
+  final Color bgColor;
+  final Color iconColor;
+
+  const _ActivityTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.bgColor,
+    required this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isLogged = meal != null;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: _TappableCard(
-            onTap: onTap,
-            child: Row(
-              children: [
-                // Meal icon
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isLogged
-                        ? AppColors.primary.withValues(alpha: 0.07)
-                        : const Color(0xFFF4F6FF),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      mealType.icon,
-                      size: 20,
-                      color:
-                          isLogged ? AppColors.primary : AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Title + subtitle
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            mealType.label,
-                            style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          if (isLogged) ...[
-                            const SizedBox(width: 5),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color:
-                                    AppColors.success.withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: Text(
-                                '+${meal!.nutrition.score}',
-                                style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.success,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isLogged ? _buildSubtitle(meal!) : 'Tap to log meal',
-                        style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.textSecondary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Logged/unlogged indicator — animates between states
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 320),
-                  switchInCurve: Curves.easeOutBack,
-                  switchOutCurve: Curves.easeIn,
-                  transitionBuilder: (child, anim) => ScaleTransition(
-                    scale: anim,
-                    child: FadeTransition(opacity: anim, child: child),
-                  ),
-                  child: isLogged
-                      ? Container(
-                          key: const ValueKey('logged'),
-                          width: 30,
-                          height: 30,
-                          decoration: const BoxDecoration(
-                            color: AppColors.navBarDark,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check_rounded,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        )
-                      : Container(
-                          key: const ValueKey('unlogged'),
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFFCDD0E3),
-                              width: 1.5,
-                            ),
-                            color: Colors.transparent,
-                          ),
-                          child: Icon(
-                            Icons.add_rounded,
-                            color: AppColors.textSecondary,
-                            size: 17,
-                          ),
-                        ),
-                ),
-              ],
-            ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
-        ),
-        // Time label
-        if (isLogged) ...[
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onTap,
-            behavior: HitTestBehavior.opaque,
-            child: SizedBox(
-              width: 44,
-              height: 48,
-              child: Center(
-                child: Text(
-                  _formatTime(meal!.createdAt),
-                  style: TextStyle(fontFamily: 'PlusJakartaSans', 
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(child: PhosphorIcon(icon, size: 18, color: iconColor)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  unit,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
-        ] else
-          const SizedBox(width: 48),
-      ],
+        ],
+      ),
     );
-  }
-
-  String _buildSubtitle(MealModel m) {
-    if (m.description != null && m.description!.trim().isNotEmpty) {
-      return m.description!.trim();
-    }
-    if (m.name.isNotEmpty) return m.name;
-    return '${m.nutrition.calories.round()} kcal';
-  }
-
-  String _formatTime(DateTime dt) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$h:$m';
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tappable card — spring-press scale with shadow lift
+// Motivation banner with female character
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _TappableCard extends StatelessWidget {
-  final VoidCallback onTap;
-  final Widget child;
-
-  const _TappableCard({required this.onTap, required this.child});
-
-  static const _r = 16.0;
-  static const _padding = EdgeInsets.symmetric(horizontal: 14, vertical: 13);
+class _MotivationBanner extends StatelessWidget {
+  const _MotivationBanner();
 
   @override
   Widget build(BuildContext context) {
-    return _PressScale(
-      onTap: onTap,
-      scale: 0.97,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(_r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-          ],
+    final hour = DateTime.now().hour;
+    final headline = hour < 12
+        ? 'Good morning!'
+        : hour < 17
+            ? 'Keep pushing!'
+            : 'Evening hustle!';
+    final sub = hour < 12
+        ? 'Start your day strong.'
+        : hour < 17
+            ? "You're doing great today."
+            : 'Finish strong tonight.';
+
+    return Container(
+      height: 140,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: AppColors.dashboardGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(_r),
-          clipBehavior: Clip.hardEdge,
-          child: Container(
-            padding: _padding,
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFEEF0F8)),
-              borderRadius: BorderRadius.circular(_r),
-            ),
-            child: child,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
-        ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Subtle decorative circles
+          Positioned(
+            top: -24,
+            right: 110,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -28,
+            left: 16,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.04),
+              ),
+            ),
+          ),
+          // Motivational text on the left
+          Positioned(
+            left: 20,
+            top: 0,
+            bottom: 0,
+            right: 138,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  headline,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  sub,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withValues(alpha: 0.70),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: const Text(
+                    'View today\'s plan →',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Female character — clipped to card
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: Image.asset(
+              'assets/images/meal_character.png',
+              width: 130,
+              fit: BoxFit.contain,
+              alignment: Alignment.bottomCenter,
+              errorBuilder: (context, error, stack) => SizedBox(
+                width: 130,
+                child: Center(
+                  child: PhosphorIcon(
+                    PhosphorIcons.personSimpleRun(),
+                    size: 56,
+                    color: Colors.white.withValues(alpha: 0.30),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
