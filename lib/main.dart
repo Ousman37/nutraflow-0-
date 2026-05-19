@@ -15,7 +15,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (_) {
-    // Firebase not configured yet — run in UI-preview mode
+    // Firebase not configured yet — run in UI-preview mode  Firebase not confgured yet  - run in UI-preview moden  ok. todo afer this we have to make sure to handle this case in the app,
   }
 
   SystemChrome.setSystemUIOverlayStyle(

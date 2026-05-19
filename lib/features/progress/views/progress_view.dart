@@ -57,35 +57,152 @@ class _ProgressHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
+    final ctrl = Get.find<ProgressController>();
+
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: AppColors.dashboardGradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
-      padding: EdgeInsets.fromLTRB(20, topPad + 16, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          const Text(
-            'Progress',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
+          // Decorative circles
+          Positioned(
+            top: -24,
+            right: 120,
+            child: Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
+          Positioned(
+            bottom: -30,
+            left: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.04),
+              ),
+            ),
+          ),
+
+          // Text + summary chips
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, topPad + 20, 160, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Progress',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This week at a glance',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withValues(alpha: 0.65),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Obx(() => Row(
+                  children: [
+                    _HeaderChip(
+                      icon: PhosphorIcons.flame(PhosphorIconsStyle.fill),
+                      label:
+                          '${ctrl.currentStreak.value} day streak',
+                      color: const Color(0xFFF5A623),
+                    ),
+                    const SizedBox(width: 8),
+                    _HeaderChip(
+                      icon: PhosphorIcons.barbell(),
+                      label: '${ctrl.totalWorkoutMinutes} min',
+                      color: AppColors.secondary,
+                    ),
+                  ],
+                )),
+              ],
+            ),
+          ),
+
+          // Character — starts below status bar so head is never clipped
+          Positioned(
+            right: 0,
+            bottom: 0,
+            top: topPad,
+            child: Image.asset(
+              'assets/images/meal_character.png',
+              width: 152,
+              fit: BoxFit.contain,
+              alignment: Alignment.bottomCenter,
+              errorBuilder: (context, error, stack) => SizedBox(
+                width: 152,
+                child: Center(
+                  child: PhosphorIcon(
+                    PhosphorIcons.personSimpleRun(),
+                    size: 56,
+                    color: Colors.white.withValues(alpha: 0.25),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderChip extends StatelessWidget {
+  final PhosphorIconData icon;
+  final String label;
+  final Color color;
+
+  const _HeaderChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PhosphorIcon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
           Text(
-            'This week at a glance',
-            style: TextStyle(
+            label,
+            style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.65),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
             ),
           ),
         ],
