@@ -15,7 +15,7 @@ class OnboardingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = Get.put(OnboardingController());
+    final ctrl = Get.find<OnboardingController>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -389,7 +389,9 @@ class _GoalStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const SizedBox(height: 8),
@@ -439,6 +441,7 @@ class _GoalStep extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }

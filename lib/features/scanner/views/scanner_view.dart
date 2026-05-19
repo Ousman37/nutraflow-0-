@@ -153,6 +153,7 @@ class _ScannerViewState extends State<ScannerView>
                     onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() => _modeIndex = i);
+                      if (i == 3) _openGallery();
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),

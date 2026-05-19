@@ -31,7 +31,9 @@ class AuthController extends GetxController {
     try {
       if (user == null) {
         userProfile.value = null;
-        Get.offAllNamed(AppRoutes.welcome);
+        if (Get.currentRoute != AppRoutes.welcome) {
+          Get.offAllNamed(AppRoutes.welcome);
+        }
         return;
       }
 
@@ -39,22 +41,33 @@ class AuthController extends GetxController {
       await user.reload();
       final refreshed = _authService.currentUser;
       if (refreshed == null || !refreshed.emailVerified) {
-        Get.offAllNamed(AppRoutes.verifyEmail,
-            arguments: {'email': user.email ?? ''});
+        if (Get.currentRoute != AppRoutes.verifyEmail) {
+          Get.offAllNamed(AppRoutes.verifyEmail,
+              arguments: {'email': user.email ?? ''});
+        }
+        return;
+      }
+
+      // Never interrupt an active onboarding or post-onboarding motivation flow.
+      // The user is filling in their profile — disposing the controller here
+      // causes "TextEditingController used after disposed" errors.
+      if (Get.currentRoute == AppRoutes.onboarding ||
+          Get.currentRoute == AppRoutes.motivation) {
         return;
       }
 
       final profile = await _firestoreService.getUserProfile(refreshed.uid);
       userProfile.value = profile;
       if (profile == null) {
-        Get.offAllNamed(AppRoutes.onboarding,
-            arguments: {
-              'uid': refreshed.uid,
-              'name': refreshed.displayName ?? '',
-              'email': refreshed.email ?? '',
-            });
+        Get.offAllNamed(AppRoutes.onboarding, arguments: {
+          'uid': refreshed.uid,
+          'name': refreshed.displayName ?? '',
+          'email': refreshed.email ?? '',
+        });
       } else {
-        Get.offAllNamed(AppRoutes.home);
+        if (Get.currentRoute != AppRoutes.home) {
+          Get.offAllNamed(AppRoutes.home);
+        }
       }
     } catch (_) {
       Get.offAllNamed(AppRoutes.login);

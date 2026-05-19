@@ -7,6 +7,7 @@ import '../features/auth/views/forgot_password_view.dart';
 import '../features/auth/views/verify_email_view.dart';
 import '../features/onboarding/views/onboarding_view.dart';
 import '../features/onboarding/views/motivation_view.dart';
+import '../features/onboarding/bindings/onboarding_binding.dart';
 import '../features/home/views/home_view.dart';
 import '../features/meal/views/add_meal_view.dart';
 import '../features/meal/views/meal_detail_view.dart';
@@ -113,6 +114,7 @@ abstract class AppPages {
     GetPage(
       name: AppRoutes.onboarding,
       page: () => const OnboardingView(),
+      binding: OnboardingBinding(),
       transition: Transition.fadeIn,
     ),
     GetPage(
