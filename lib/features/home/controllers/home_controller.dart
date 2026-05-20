@@ -2,15 +2,21 @@ import 'package:get/get.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../meal/models/meal_model.dart';
 import '../../meal/services/meal_service.dart';
+import '../../water/services/water_service.dart';
 import '../../../core/utils/calorie_calculator.dart';
 
 class HomeController extends GetxController {
   final _mealService = MealService();
+  final _waterService = WaterService();
   final _authController = Get.find<AuthController>();
 
   final RxList<MealModel> todaysMeals = <MealModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxInt selectedTabIndex = 0.obs;
+  final RxInt waterGlasses = 0.obs;
+
+  static const int waterGoal = 8;
+  static const int mlPerGlass = 250;
 
   // Week-day selector — 0=Mon … 6=Sun, defaults to today
   final RxInt selectedDayIndex = RxInt(DateTime.now().weekday - 1);
@@ -19,6 +25,7 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     _loadMealsForDate(selectedDate);
+    _loadWaterForDate(selectedDate);
   }
 
   // ── Week helpers ────────────────────────────────────────────────────────────
@@ -41,6 +48,7 @@ class HomeController extends GetxController {
     if (selectedDayIndex.value == index) return;
     selectedDayIndex.value = index;
     _loadMealsForDate(selectedDate);
+    _loadWaterForDate(selectedDate);
   }
 
   // ── Meal loading ────────────────────────────────────────────────────────────
@@ -63,7 +71,47 @@ class HomeController extends GetxController {
   }
 
   @override
-  Future<void> refresh() => _loadMealsForDate(selectedDate);
+  Future<void> refresh() async {
+    await Future.wait([
+      _loadMealsForDate(selectedDate),
+      _loadWaterForDate(selectedDate),
+    ]);
+  }
+
+  // ── Water tracking ──────────────────────────────────────────────────────────
+
+  Future<void> _loadWaterForDate(DateTime date) async {
+    final uid = _authController.currentUserId;
+    if (uid.isEmpty) return;
+    try {
+      waterGlasses.value = await _waterService.getGlasses(uid, date);
+    } catch (_) {}
+  }
+
+  Future<void> addWaterGlass() async {
+    if (waterGlasses.value >= waterGoal) return;
+    waterGlasses.value++;
+    _saveWater();
+  }
+
+  Future<void> removeWaterGlass() async {
+    if (waterGlasses.value <= 0) return;
+    waterGlasses.value--;
+    _saveWater();
+  }
+
+  Future<void> setWaterGlasses(int count) async {
+    waterGlasses.value = count.clamp(0, waterGoal);
+    _saveWater();
+  }
+
+  void _saveWater() {
+    final uid = _authController.currentUserId;
+    if (uid.isEmpty) return;
+    _waterService.setGlasses(uid, selectedDate, waterGlasses.value);
+  }
+
+  int get waterMl => waterGlasses.value * mlPerGlass;
 
   // ── Nutrition aggregates ────────────────────────────────────────────────────
 

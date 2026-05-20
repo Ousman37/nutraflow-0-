@@ -6,6 +6,17 @@ import 'package:http/http.dart' as http;
 import '../models/nutrition_analysis.dart';
 import '../../../core/config/api_config.dart';
 
+/// Thrown when the scanned image does not contain food or drink.
+class NotFoodImageException implements Exception {
+  final String message;
+  const NotFoodImageException([
+    this.message = 'This image does not appear to contain food or drink. '
+        'Please scan a meal or beverage.',
+  ]);
+  @override
+  String toString() => message;
+}
+
 class AINutritionService {
   final _rng = Random();
 
@@ -17,14 +28,8 @@ class AINutritionService {
         ApiConfig.claudeApiKey != 'YOUR_API_KEY_HERE';
 
     if (imagePath != null && hasKey) {
-      try {
-        return await _analyzeWithClaude(
-          imagePath: imagePath,
-          description: description,
-        );
-      } catch (_) {
-        // Fall back to mock if the API call fails
-      }
+      // Real Claude Vision — may throw NotFoodImageException
+      return _analyzeWithClaude(imagePath: imagePath, description: description);
     }
 
     await Future.delayed(const Duration(milliseconds: 1800));
@@ -45,16 +50,23 @@ class AINutritionService {
             ? 'image/webp'
             : 'image/jpeg';
 
-    final promptBuf = StringBuffer(
-      'Analyze this food/meal image and estimate its nutritional content.',
-    );
+    final promptBuf = StringBuffer('''
+You are a nutrition analysis AI for a food tracking app.
+
+First, determine whether this image contains food or drink (including water, juice, smoothies, coffee, etc.).
+If it does NOT contain food or drink, return ONLY this JSON:
+{"isFood": false}
+
+If it DOES contain food or drink, identify exactly what it is and return nutritional estimates.
+''');
     if (description != null && description.isNotEmpty) {
-      promptBuf.write(' The user described it as: "$description".');
+      promptBuf.write('The user described it as: "$description".\n');
     }
     promptBuf.write('''
-
-Return ONLY valid JSON — no markdown, no extra text:
+Return ONLY valid JSON — no markdown, no code fences, no extra text:
 {
+  "isFood": true,
+  "foodName": "<specific name of the food or drink, e.g. Grilled Chicken Caesar Salad>",
   "calories": <number>,
   "proteinG": <number>,
   "carbsG": <number>,
@@ -64,12 +76,12 @@ Return ONLY valid JSON — no markdown, no extra text:
   "feedback": "<one concise sentence assessing this meal>",
   "suggestions": ["<actionable tip 1>", "<actionable tip 2>", "<actionable tip 3>"],
   "colorGroups": {
-    "red": <true/false — red fruits/vegetables present>,
-    "orange": <true/false — orange vegetables present>,
-    "yellow": <true/false — yellow fruits/vegetables present>,
-    "green": <true/false — green vegetables present>,
-    "bluePurple": <true/false — blue or purple produce present>,
-    "whiteBrown": <true/false — grains or protein present>
+    "red": <true/false>,
+    "orange": <true/false>,
+    "yellow": <true/false>,
+    "green": <true/false>,
+    "bluePurple": <true/false>,
+    "whiteBrown": <true/false>
   }
 }''');
 
@@ -108,18 +120,26 @@ Return ONLY valid JSON — no markdown, no extra text:
         .timeout(const Duration(seconds: 30));
 
     if (response.statusCode != 200) {
-      throw Exception('Claude API error ${response.statusCode}: ${response.body}');
+      throw Exception(
+          'Claude API error ${response.statusCode}: ${response.body}');
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final text = (body['content'] as List).first['text'] as String;
 
     // Strip any accidental markdown code fences
-    final cleaned = text.replaceAll(RegExp(r'```[a-z]*'), '').trim();
+    final cleaned = text.replaceAll(RegExp(r'```[a-z]*\n?'), '').trim();
     final n = jsonDecode(cleaned) as Map<String, dynamic>;
+
+    // Reject non-food images
+    if (n['isFood'] == false) {
+      throw const NotFoodImageException();
+    }
+
     final cg = n['colorGroups'] as Map<String, dynamic>;
 
     return NutritionAnalysis(
+      foodName: n['foodName'] as String? ?? '',
       calories: (n['calories'] as num).toDouble(),
       proteinG: (n['proteinG'] as num).toDouble(),
       carbsG: (n['carbsG'] as num).toDouble(),
@@ -163,7 +183,7 @@ Return ONLY valid JSON — no markdown, no extra text:
     );
   }
 
-  // ── Mock fallback ─────────────────────────────────────────────────────────
+  // ── Mock fallback (no API key) ─────────────────────────────────────────────
 
   NutritionAnalysis _estimateFromKeywords(String input) {
     double calories = 400 + _rng.nextDouble() * 300;
@@ -212,6 +232,7 @@ Return ONLY valid JSON — no markdown, no extra text:
 
     final score = _calculateScore(calories, protein, carbs, fat);
     return NutritionAnalysis(
+      foodName: input.isNotEmpty ? _capitalize(input) : '',
       calories: calories,
       proteinG: protein,
       carbsG: carbs,
@@ -223,6 +244,9 @@ Return ONLY valid JSON — no markdown, no extra text:
       colorGroups: _detectColorGroups(input),
     );
   }
+
+  String _capitalize(String s) =>
+      s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
   bool _contains(String input, List<String> keywords) =>
       keywords.any((k) => input.contains(k));
@@ -277,7 +301,8 @@ Return ONLY valid JSON — no markdown, no extra text:
       ColorGroup(
         color: 'Orange',
         foodName: 'Carrots / Sweet Potato',
-        present: _contains(input, ['carrot', 'sweet potato', 'orange', 'pumpkin']),
+        present: _contains(
+            input, ['carrot', 'sweet potato', 'orange', 'pumpkin']),
       ),
       ColorGroup(
         color: 'Yellow',

@@ -752,12 +752,9 @@ class _MacroProgressRow extends StatelessWidget {
 class _WaterIntakeCard extends StatelessWidget {
   const _WaterIntakeCard();
 
-  static const _totalGlasses = 8;
-  static const _filledGlasses = 0;
-  static const _mlConsumed = 0;
-
   @override
   Widget build(BuildContext context) {
+    final ctrl = Get.find<HomeController>();
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -771,75 +768,131 @@ class _WaterIntakeCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Obx(() {
+        final glasses = ctrl.waterGlasses.value;
+        final ml = ctrl.waterMl;
+        final goal = HomeController.waterGoal;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header row ─────────────────────────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: const [
-                    Text(
-                      '$_mlConsumed ml',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        height: 1.0,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 2),
-                      child: Text(
-                        'Water Consuming',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  '$ml ml',
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    height: 1.0,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: List.generate(_totalGlasses, (i) {
-                    final filled = i < _filledGlasses;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 4),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    'of ${goal * HomeController.mlPerGlass} ml goal',
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                // ── +/- controls ───────────────────────────────────────────
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    ctrl.removeWaterGlass();
+                  },
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: AppColors.inputFill,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.remove_rounded,
+                        size: 16, color: AppColors.textSecondary),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    ctrl.addWaterGlass();
+                  },
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.add_rounded,
+                        size: 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            // ── Drop icons — tap to set count ──────────────────────────────
+            Row(
+              children: List.generate(goal, (i) {
+                final filled = i < glasses;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      // Tap filled → remove down to i, tap empty → fill up to i+1
+                      ctrl.setWaterGlasses(filled ? i : i + 1);
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 2),
                       child: PhosphorIcon(
                         PhosphorIcons.drop(
                           filled
                               ? PhosphorIconsStyle.fill
                               : PhosphorIconsStyle.regular,
                         ),
-                        size: 21,
-                        color: filled ? AppColors.primary : AppColors.divider,
+                        size: 22,
+                        color:
+                            filled ? AppColors.primary : AppColors.divider,
                       ),
-                    );
-                  }),
-                ),
-              ],
+                    ),
+                  ),
+                );
+              }),
             ),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'You drank $_filledGlasses of $_totalGlasses\nglasses of water',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
-              fontWeight: FontWeight.w400,
-              color: AppColors.textSecondary,
-              height: 1.6,
+            const SizedBox(height: 10),
+            // ── Progress bar ───────────────────────────────────────────────
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: glasses / goal,
+                minHeight: 5,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.10),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
             ),
-            textAlign: TextAlign.end,
-          ),
-        ],
-      ),
+            const SizedBox(height: 8),
+            Text(
+              '$glasses of $goal glasses',
+              style: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 }
