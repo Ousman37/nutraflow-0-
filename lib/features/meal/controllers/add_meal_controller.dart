@@ -104,11 +104,29 @@ class AddMealController extends GetxController {
       );
       analysisResult.value = result;
       if (mealName.value.isEmpty) {
-        mealName.value = 'Meal — ${selectedMealType.value.label}';
+        mealName.value = result.foodName.isNotEmpty
+            ? result.foodName
+            : 'Meal — ${selectedMealType.value.label}';
       }
       if (Get.isRegistered<SubscriptionController>()) {
         Get.find<SubscriptionController>().recordAnalysis();
       }
+    } on NotFoodImageException catch (e) {
+      isAnalyzing.value = false;
+      currentStep.value = 0;
+      selectedImage.value = null;
+      Get.back(); // return to scanner
+      Get.snackbar(
+        'Not a Food Image',
+        e.message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+      return;
     } catch (e) {
       Get.snackbar('Analysis Failed', e.toString(),
           snackPosition: SnackPosition.BOTTOM);

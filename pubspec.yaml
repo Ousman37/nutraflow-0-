@@ -38,6 +38,7 @@ dependencies:
   purchases_flutter: ^10.0.1
 
   # Utils
+  flutter_dotenv: ^5.2.1
   http: ^1.2.2
   shared_preferences: ^2.3.2
   intl: ^0.19.0
@@ -66,5 +67,6 @@ flutter:
           weight: 800
 
   assets:
+    - .env
     - assets/images/
     - assets/icons/

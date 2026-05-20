@@ -1,6 +1,6 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 abstract class ApiConfig {
-  // Replace with your actual Anthropic API key.
-  // Get one at: https://console.anthropic.com/
-  static const String claudeApiKey = 'YOUR_API_KEY_HERE';
+  static String get claudeApiKey => dotenv.env['CLAUDE_API_KEY'] ?? '';
   static const String claudeModel = 'claude-haiku-4-5-20251001';
 }

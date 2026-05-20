@@ -8,6 +8,7 @@ class NutritionAnalysis {
   final String feedback;
   final List<String> suggestions;
   final List<ColorGroup> colorGroups;
+  final String foodName;
 
   const NutritionAnalysis({
     required this.calories,
@@ -19,6 +20,7 @@ class NutritionAnalysis {
     required this.feedback,
     required this.suggestions,
     required this.colorGroups,
+    this.foodName = '',
   });
 
   Map<String, dynamic> toMap() => {
@@ -31,6 +33,7 @@ class NutritionAnalysis {
         'feedback': feedback,
         'suggestions': suggestions,
         'colorGroups': colorGroups.map((e) => e.toMap()).toList(),
+        'foodName': foodName,
       };
 
   factory NutritionAnalysis.fromMap(Map<String, dynamic> map) {
@@ -46,6 +49,7 @@ class NutritionAnalysis {
       colorGroups: (map['colorGroups'] as List<dynamic>? ?? [])
           .map((e) => ColorGroup.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
+      foodName: map['foodName'] as String? ?? '',
     );
   }
 
