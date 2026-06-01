@@ -1,3 +1,5 @@
+// This is for   I will try to see how to fix it later than   fix that  and i will let see how can we have it  okay ill try to do it  bu
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -35,21 +37,23 @@ class AnalyticsView extends StatelessWidget {
                         style: AppTextStyles.bodyMedium,
                       ),
                       const SizedBox(height: 24),
-                      Obx(() => ctrl.isLoading.value
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.primary,
+                      Obx(
+                        () => ctrl.isLoading.value
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : Column(
+                                children: [
+                                  _StatCards(ctrl: ctrl),
+                                  const SizedBox(height: 16),
+                                  WeeklyBarChart(stats: ctrl.weeklyStats),
+                                  const SizedBox(height: 16),
+                                  _DailyBreakdown(ctrl: ctrl),
+                                ],
                               ),
-                            )
-                          : Column(
-                              children: [
-                                _StatCards(ctrl: ctrl),
-                                const SizedBox(height: 16),
-                                WeeklyBarChart(stats: ctrl.weeklyStats),
-                                const SizedBox(height: 16),
-                                _DailyBreakdown(ctrl: ctrl),
-                              ],
-                            )),
+                      ),
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -145,8 +149,9 @@ class _StatCard extends StatelessWidget {
           ),
           Text(
             label,
-            style: AppTextStyles.captionText
-                .copyWith(color: Colors.white.withValues(alpha: 0.8)),
+            style: AppTextStyles.captionText.copyWith(
+              color: Colors.white.withValues(alpha: 0.8),
+            ),
           ),
         ],
       ),
@@ -178,9 +183,7 @@ class _DailyBreakdown extends StatelessWidget {
         children: [
           Text('Daily Breakdown', style: AppTextStyles.headlineSmall),
           const SizedBox(height: 14),
-          ...ctrl.weeklyStats.map(
-            (day) => _DayRow(day: day),
-          ),
+          ...ctrl.weeklyStats.map((day) => _DayRow(day: day)),
         ],
       ),
     );
@@ -246,9 +249,7 @@ class _DayRow extends StatelessWidget {
           SizedBox(
             width: 52,
             child: Text(
-              day.mealCount > 0
-                  ? '${day.calories.round()} cal'
-                  : 'No data',
+              day.mealCount > 0 ? '${day.calories.round()} cal' : 'No data',
               style: AppTextStyles.captionText,
               textAlign: TextAlign.right,
             ),
