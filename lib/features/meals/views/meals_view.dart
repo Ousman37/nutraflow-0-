@@ -77,17 +77,24 @@ class _MealsAppBar extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.inputFill,
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: const Icon(
-                  Icons.tune_rounded,
-                  size: 18,
-                  color: AppColors.textSecondary,
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Get.toNamed(AppRoutes.journal);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.inputFill,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.history_rounded,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ],

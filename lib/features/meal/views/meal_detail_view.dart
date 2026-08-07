@@ -41,6 +41,8 @@ class MealDetailView extends StatelessWidget {
                     const SizedBox(height: 16),
                     _MacroGridCard(nutrition: meal.nutrition),
                     const SizedBox(height: 24),
+                    _LogAgainButton(ctrl: ctrl),
+                    const SizedBox(height: 12),
                     _DeleteButton(ctrl: ctrl),
                   ],
                 ),
@@ -664,6 +666,51 @@ class _MacroGridCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Log again button — re-log this meal for right now, skipping AI analysis
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LogAgainButton extends StatelessWidget {
+  final MealDetailController ctrl;
+  const _LogAgainButton({required this.ctrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() => SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton.icon(
+            onPressed: ctrl.isLoggingAgain.value
+                ? null
+                : () {
+                    HapticFeedback.mediumImpact();
+                    ctrl.logAgain();
+                  },
+            icon: ctrl.isLoggingAgain.value
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.replay_rounded, size: 18, color: Colors.white),
+            label: Text(
+              ctrl.isLoggingAgain.value ? 'Logging…' : 'Log This Again Today',
+              style: AppTextStyles.labelLarge.copyWith(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ));
   }
 }
 

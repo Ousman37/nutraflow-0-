@@ -17,6 +17,9 @@ import '../features/subscription/views/paywall_view.dart';
 import '../features/rewards/views/rewards_screen.dart';
 import '../features/scanner/views/scanner_view.dart';
 import '../features/profile/views/profile_view.dart';
+import '../features/journal/views/journal_view.dart';
+import '../features/analytics/views/analytics_view.dart';
+import '../features/notifications/views/notification_settings_view.dart';
 import 'app_routes.dart';
 
 // Slight slide-up + fade — used for action sheets and add-meal flows.
@@ -166,6 +169,22 @@ abstract class AppPages {
     GetPage(
       name: AppRoutes.profile,
       page: () => const ProfileView(),
+      customTransition: _SlideUpFadeTransition(),
+      transitionDuration: const Duration(milliseconds: 240),
+    ),
+    GetPage(
+      name: AppRoutes.journal,
+      page: () => const JournalView(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.analytics,
+      page: () => const AnalyticsView(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.notificationSettings,
+      page: () => const NotificationSettingsView(),
       customTransition: _SlideUpFadeTransition(),
       transitionDuration: const Duration(milliseconds: 240),
     ),

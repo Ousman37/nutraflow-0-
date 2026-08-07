@@ -69,6 +69,35 @@ class ProfileController extends GetxController {
     }
   }
 
+  // Directly overrides the calculated targets — used when the user wants
+  // to set their own numbers instead of the BMR/TDEE-derived defaults.
+  Future<void> updateTargetsManually({
+    required double dailyCalorieTarget,
+    required int proteinG,
+    required int carbsG,
+    required int fatG,
+  }) async {
+    isSaving.value = true;
+    try {
+      final current = _authController.userProfile.value;
+      if (current == null) return;
+
+      final updated = current.copyWith(
+        dailyCalorieTarget: dailyCalorieTarget,
+        macroTargets: MacroTargets(
+          proteinG: proteinG,
+          carbsG: carbsG,
+          fatG: fatG,
+        ),
+      );
+
+      await _firestoreService.updateUserProfile(current.id, updated.toMap());
+      _authController.userProfile.value = updated;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
   Future<bool> deleteAccount() async {
     isSaving.value = true;
     try {

@@ -210,6 +210,17 @@ class _TargetsCard extends StatelessWidget {
 
     return _Card(
       title: 'Daily Targets',
+      onEdit: () {
+        HapticFeedback.lightImpact();
+        Get.bottomSheet(
+          _EditTargetsSheet(ctrl: ctrl),
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          backgroundColor: Colors.white,
+        );
+      },
       children: [
         _TargetRow(
           label: 'Calories',
@@ -400,7 +411,8 @@ class _DeleteAccountButton extends StatelessWidget {
 class _Card extends StatelessWidget {
   final String title;
   final List<Widget> children;
-  const _Card({required this.title, required this.children});
+  final VoidCallback? onEdit;
+  const _Card({required this.title, required this.children, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -420,7 +432,32 @@ class _Card extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.headlineSmall),
+          Row(
+            children: [
+              Expanded(
+                  child: Text(title, style: AppTextStyles.headlineSmall)),
+              if (onEdit != null)
+                GestureDetector(
+                  onTap: onEdit,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Center(
+                      child: PhosphorIcon(
+                        PhosphorIcons.pencilSimple(),
+                        size: 13,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 14),
           ...children,
         ],
@@ -881,6 +918,210 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     PhosphorIcons.floppyDisk(),
                     color: Colors.white,
                     size: 18,
+                  ),
+                )),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Edit Targets Sheet ────────────────────────────────────────────────────────
+
+class _EditTargetsSheet extends StatefulWidget {
+  final ProfileController ctrl;
+  const _EditTargetsSheet({required this.ctrl});
+
+  @override
+  State<_EditTargetsSheet> createState() => _EditTargetsSheetState();
+}
+
+class _EditTargetsSheetState extends State<_EditTargetsSheet> {
+  late int _calories;
+  late int _protein;
+  late int _carbs;
+  late int _fat;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.ctrl.profile;
+    _calories = p?.dailyCalorieTarget.round() ?? 2000;
+    _protein = p?.macroTargets.proteinG ?? 150;
+    _carbs = p?.macroTargets.carbsG ?? 225;
+    _fat = p?.macroTargets.fatG ?? 65;
+  }
+
+  Future<void> _save() async {
+    await widget.ctrl.updateTargetsManually(
+      dailyCalorieTarget: _calories.toDouble(),
+      proteinG: _protein,
+      carbsG: _carbs,
+      fatG: _fat,
+    );
+    if (mounted) Get.back();
+    Get.snackbar(
+      'Targets Updated',
+      'Your daily targets have been set.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: AppColors.primary,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+  }
+
+  // Recomputes targets from body stats/goal/activity, discarding the
+  // manual override.
+  Future<void> _resetToCalculated() async {
+    final p = widget.ctrl.profile;
+    if (p == null) return;
+    await widget.ctrl.updateProfile(
+      age: p.age,
+      weightKg: p.weightKg,
+      heightCm: p.heightCm,
+      gender: p.gender,
+      goal: p.goal,
+      activityLevel: p.activityLevel,
+      dietaryPreferences: p.dietaryPreferences,
+    );
+    if (mounted) Get.back();
+    Get.snackbar(
+      'Targets Reset',
+      'Recalculated from your body stats and goal.',
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + bottomInset),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDDE0EE),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Edit Daily Targets',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Set your own numbers — overrides the calculated targets.',
+              style: AppTextStyles.bodySmall,
+            ),
+            const SizedBox(height: 24),
+            _FieldRow(
+              label: 'Calories',
+              child: _Stepper(
+                value: _calories,
+                min: 800,
+                max: 6000,
+                onDecrement: () => setState(
+                    () => _calories = (_calories - 50).clamp(800, 6000)),
+                onIncrement: () => setState(
+                    () => _calories = (_calories + 50).clamp(800, 6000)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _FieldRow(
+              label: 'Protein (g)',
+              child: _Stepper(
+                value: _protein,
+                min: 0,
+                max: 400,
+                onDecrement: () =>
+                    setState(() => _protein = (_protein - 5).clamp(0, 400)),
+                onIncrement: () =>
+                    setState(() => _protein = (_protein + 5).clamp(0, 400)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _FieldRow(
+              label: 'Carbs (g)',
+              child: _Stepper(
+                value: _carbs,
+                min: 0,
+                max: 600,
+                onDecrement: () =>
+                    setState(() => _carbs = (_carbs - 5).clamp(0, 600)),
+                onIncrement: () =>
+                    setState(() => _carbs = (_carbs + 5).clamp(0, 600)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _FieldRow(
+              label: 'Fat (g)',
+              child: _Stepper(
+                value: _fat,
+                min: 0,
+                max: 300,
+                onDecrement: () =>
+                    setState(() => _fat = (_fat - 5).clamp(0, 300)),
+                onIncrement: () =>
+                    setState(() => _fat = (_fat + 5).clamp(0, 300)),
+              ),
+            ),
+            const SizedBox(height: 28),
+            Obx(() => GradientButton(
+                  text: 'Save Targets',
+                  isLoading: widget.ctrl.isSaving.value,
+                  onPressed: widget.ctrl.isSaving.value ? null : _save,
+                  icon: PhosphorIcon(
+                    PhosphorIcons.floppyDisk(),
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                )),
+            const SizedBox(height: 12),
+            Obx(() => GestureDetector(
+                  onTap: widget.ctrl.isSaving.value
+                      ? null
+                      : _resetToCalculated,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: const Text(
+                      'Reset to Calculated',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                   ),
                 )),
             const SizedBox(height: 8),

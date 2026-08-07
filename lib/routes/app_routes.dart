@@ -11,6 +11,8 @@ abstract class AppRoutes {
   static const String selectMethod = '/select-method';
   static const String mealDetail = '/meal-detail';
   static const String analytics = '/analytics';
+  static const String journal = '/journal';
+  static const String notificationSettings = '/notification-settings';
   static const String profile = '/profile';
   static const String motivation = '/motivation';
   static const String paywall = '/paywall';
