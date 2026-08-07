@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
+import 'features/notifications/services/notification_service.dart';
 import 'routes/app_pages.dart';
 import 'routes/app_routes.dart';
 
@@ -20,6 +21,8 @@ void main() async {
   } catch (_) {
     // Firebase not configured yet — run in UI-preview mode  Firebase not confgured yet  - run in UI-preview moden  ok. todo afer this we have to make sure to handle this case in the app,
   }
+
+  await NotificationService.init();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

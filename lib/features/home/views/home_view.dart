@@ -406,24 +406,31 @@ class _DashGreeting extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: PhosphorIcon(
-              PhosphorIcons.bell(),
-              size: 20,
-              color: AppColors.textPrimary,
+          _PressScale(
+            scale: 0.92,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Get.toNamed(AppRoutes.notificationSettings);
+            },
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: PhosphorIcon(
+                PhosphorIcons.bell(),
+                size: 20,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
         ],
@@ -511,7 +518,7 @@ class _TodayStatusCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Animated calorie ring
+// Animated calorie ring  
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _CalorieRingWidget extends StatefulWidget {
