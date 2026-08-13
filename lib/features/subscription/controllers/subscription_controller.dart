@@ -24,9 +24,14 @@ class SubscriptionController extends GetxController {
   final Rx<Package?> monthlyPackage = Rx<Package?>(null);
   final Rx<Package?> yearlyPackage = Rx<Package?>(null);
   final Rx<Package?> lifetimePackage = Rx<Package?>(null);
-  final RxString monthlyPriceString = r'$9.99/mo'.obs;
-  final RxString yearlyPriceString = r'$59.99/yr'.obs;
+  // Neutral placeholders — never shown as a real price. Real prices always
+  // come from StoreProduct.priceString once offerings load; if these are
+  // still visible when the purchase button is tapped, offerings failed to
+  // load (see debug console for the logged reason).
+  final RxString monthlyPriceString = '···'.obs;
+  final RxString yearlyPriceString = '···'.obs;
   final RxString selectedPlan = 'yearly'.obs;
+  bool _offeringsLoaded = false;
 
   String get priceString => selectedPlan.value == 'yearly'
       ? yearlyPriceString.value
@@ -123,26 +128,63 @@ class SubscriptionController extends GetxController {
     monthlyPackage.value = null;
     yearlyPackage.value = null;
     lifetimePackage.value = null;
-    monthlyPriceString.value = r'$9.99/mo';
-    yearlyPriceString.value = r'$59.99/yr';
+    monthlyPriceString.value = '···';
+    yearlyPriceString.value = '···';
+    _offeringsLoaded = false;
   }
 
-  Future<void> _fetchOfferings() async {
+  // Fetches offerings and resolves the monthly/yearly packages. StoreKit
+  // product loading can be slow (especially cold-launch on a fresh
+  // TestFlight install), so this retries a few times with a short delay
+  // instead of giving up permanently after one failed/empty attempt.
+  Future<void> _fetchOfferings({int retriesLeft = 3}) async {
     final offerings = await _service.getOfferings();
     final current = offerings?.current;
-    if (current == null) return;
+
+    if (current == null) {
+      if (retriesLeft > 0) {
+        await Future.delayed(const Duration(seconds: 2));
+        return _fetchOfferings(retriesLeft: retriesLeft - 1);
+      }
+      debugPrint('[RevenueCat] giving up after retries — no current offering. '
+          'Check RevenueCat → Offerings for one marked "current", and that '
+          'App Store Connect subscriptions are in "Ready to Submit"/approved '
+          'state (unapproved products often fail to load from sandbox/TestFlight).');
+      return;
+    }
+
+    final packageSummary = current.availablePackages
+        .map((p) => '${p.identifier} -> ${p.storeProduct.identifier}')
+        .join(', ');
+    debugPrint('[RevenueCat] resolving packages from offering '
+        '"${current.identifier}": $packageSummary');
 
     final monthly = current.monthly;
     if (monthly != null) {
       monthlyPackage.value = monthly;
       monthlyPriceString.value = monthly.storeProduct.priceString;
+    } else {
+      debugPrint('[RevenueCat] no package with type "Monthly" found in '
+          'current offering — check the package\'s Package Type in RevenueCat.');
     }
+
     final yearly = current.annual;
     if (yearly != null) {
       yearlyPackage.value = yearly;
       yearlyPriceString.value = yearly.storeProduct.priceString;
+    } else {
+      debugPrint('[RevenueCat] no package with type "Annual" found in '
+          'current offering — check the package\'s Package Type in RevenueCat.');
     }
+
     lifetimePackage.value = current.lifetime;
+
+    if (monthly != null || yearly != null) {
+      _offeringsLoaded = true;
+    } else if (retriesLeft > 0) {
+      await Future.delayed(const Duration(seconds: 2));
+      return _fetchOfferings(retriesLeft: retriesLeft - 1);
+    }
   }
 
   // ── RevenueCat customer info listener ─────────────────────────────────────
@@ -202,12 +244,28 @@ class SubscriptionController extends GetxController {
 
   // ── Purchase ───────────────────────────────────────────────────────────────
 
+  Package? _resolveSelectedPackage() => selectedPlan.value == 'yearly'
+      ? (yearlyPackage.value ?? monthlyPackage.value)
+      : monthlyPackage.value;
+
   Future<void> purchase() async {
-    final pkg = selectedPlan.value == 'yearly'
-        ? (yearlyPackage.value ?? monthlyPackage.value)
-        : monthlyPackage.value;
+    var pkg = _resolveSelectedPackage();
+
+    if (pkg == null && !_offeringsLoaded) {
+      // Don't permanently give up just because the background fetch at
+      // startup hasn't resolved yet — give it one real attempt right now,
+      // since by the time the user reaches the paywall and taps buy,
+      // network/StoreKit has often caught up.
+      debugPrint('[RevenueCat] purchase() tapped before offerings loaded — '
+          'retrying fetch once before failing.');
+      await _fetchOfferings(retriesLeft: 0);
+      pkg = _resolveSelectedPackage();
+    }
 
     if (pkg == null) {
+      debugPrint('[RevenueCat] purchase() aborted — no package resolved for '
+          'plan "${selectedPlan.value}" (offeringsLoaded=$_offeringsLoaded). '
+          'See earlier [RevenueCat] logs for why offerings failed to load.');
       Get.snackbar(
         'Not Available',
         'Subscription products are loading. Please try again shortly.',
