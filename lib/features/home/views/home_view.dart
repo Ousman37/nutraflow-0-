@@ -217,8 +217,9 @@ class _FloatingNav extends StatelessWidget {
                       icon: Icons.fitness_center_rounded,
                       label: 'Workouts',
                       isActive: ctrl.selectedTabIndex.value == 2,
-                      onTap: () {
-                        if (!Get.find<SubscriptionController>().requirePro()) {
+                      onTap: () async {
+                        if (!await Get.find<SubscriptionController>()
+                            .requirePro()) {
                           return;
                         }
                         HapticFeedback.selectionClick();
@@ -229,8 +230,9 @@ class _FloatingNav extends StatelessWidget {
                       icon: Icons.bar_chart_rounded,
                       label: 'Progress',
                       isActive: ctrl.selectedTabIndex.value == 3,
-                      onTap: () {
-                        if (!Get.find<SubscriptionController>().requirePro()) {
+                      onTap: () async {
+                        if (!await Get.find<SubscriptionController>()
+                            .requirePro()) {
                           return;
                         }
                         HapticFeedback.selectionClick();
