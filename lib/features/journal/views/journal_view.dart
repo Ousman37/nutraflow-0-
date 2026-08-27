@@ -60,6 +60,19 @@ class _JournalHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Back button — Journal is reachable via a pushed route (from the
+          // Meals tab's history icon) with no bottom nav of its own, so
+          // without this there was no way back to the previous screen.
+          if (Navigator.of(context).canPop()) ...[
+            _IconBtn(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                Get.back();
+              },
+            ),
+            const SizedBox(width: 12),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

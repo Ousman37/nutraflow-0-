@@ -47,6 +47,11 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
 
   bool _sdkReady = false;
   CustomerInfoUpdateListener? _customerInfoListener;
+  // Tracks the in-flight Purchases.logIn(uid) call, if any, so a gate check
+  // (requirePro/requireMealAccess) triggered right after cold launch or
+  // right after sign-in can wait for it instead of racing it — see
+  // _resolveIsProFresh() for why this matters.
+  Future<void>? _pendingLogin;
 
   bool get isPro => status.value == SubscriptionStatus.pro;
   bool get isStatusLoading => status.value == SubscriptionStatus.loading;
@@ -124,7 +129,9 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
 
       final uid = _authController.currentUserId;
       if (uid.isNotEmpty) {
-        await _loginAndRefresh(uid);
+        final login = _loginAndRefresh(uid);
+        _pendingLogin = login;
+        await login;
       } else {
         status.value = SubscriptionStatus.free;
       }
@@ -159,7 +166,7 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
     if (user == null) {
       _handleSignOut();
     } else if (user.emailVerified) {
-      _loginAndRefresh(user.uid);
+      _pendingLogin = _loginAndRefresh(user.uid);
     }
   }
 
@@ -536,16 +543,75 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
     }
   }
 
+  // The actual source-of-truth check for every entitlement gate (Workouts,
+  // Progress, meal logging). Rather than trusting the cached `status` Rx —
+  // which can be legitimately stale for a short window (e.g. it resolved to
+  // `free` before a just-completed Purchases.logIn(uid) attached this
+  // account's purchase history) — this always asks RevenueCat directly at
+  // the moment of the tap, and only falls back to cached state if that live
+  // check can't complete in time. `status` is updated as a side effect via
+  // _onCustomerInfoUpdate, so the rest of the UI stays in sync too.
+  Future<void> _resolveIsProFresh() async {
+    if (!_sdkReady) {
+      // No usable RevenueCat key for this build — nothing live to ask;
+      // _initialize() already resolved `status` from local cache.
+      await _awaitStatusResolved();
+      return;
+    }
+
+    // A logIn(uid) triggered at startup or by a just-completed sign-in may
+    // still be in flight. Checking CustomerInfo before it finishes would ask
+    // about the *previous* (possibly anonymous, entitlement-less) RevenueCat
+    // user instead of this account — a likely cause of a freshly-logged-in
+    // Pro subscriber briefly seeing the paywall.
+    if (_pendingLogin != null) {
+      try {
+        await _pendingLogin!.timeout(const Duration(seconds: 5));
+      } catch (_) {}
+    }
+
+    try {
+      final info = await _service
+          .getCustomerInfo()
+          .timeout(const Duration(seconds: 4));
+      _logEntitlementDetails(info);
+      _onCustomerInfoUpdate(info);
+    } catch (e) {
+      debugPrint('[RevenueCat] live entitlement check failed ($e) — '
+          'falling back to cached status for this gate check.');
+      await _awaitStatusResolved();
+    }
+  }
+
+  // Debug-only visibility into the exact entitlement RevenueCat is
+  // reporting for this account at gate-check time. Deliberately limited to
+  // identifiers/booleans/dates — never receipts, prices, or other purchase
+  // details.
+  void _logEntitlementDetails(CustomerInfo info) {
+    final entitlement = info.entitlements.all[SubscriptionConfig.entitlementId];
+    debugPrint('[RevenueCat] gate check — appUserId="${info.originalAppUserId}", '
+        'entitlementId="${SubscriptionConfig.entitlementId}", '
+        'exists=${entitlement != null}, '
+        'isActive=${entitlement?.isActive ?? false}, '
+        'expirationDate=${entitlement?.expirationDate ?? "none"}');
+  }
+
   Future<bool> requirePro() async {
-    await _awaitStatusResolved();
-    if (isPro) return true;
+    await _resolveIsProFresh();
+    final allowed = isPro;
+    debugPrint('[RevenueCat] requirePro() decision: '
+        '${allowed ? "granted — opening screen" : "denied — showing paywall"}');
+    if (allowed) return true;
     Get.toNamed(AppRoutes.paywall);
     return false;
   }
 
   Future<bool> requireMealAccess() async {
-    await _awaitStatusResolved();
-    if (canLogMeal) return true;
+    await _resolveIsProFresh();
+    final allowed = canLogMeal;
+    debugPrint('[RevenueCat] requireMealAccess() decision: '
+        '${allowed ? "granted" : "denied — showing paywall"}');
+    if (allowed) return true;
     Get.toNamed(AppRoutes.paywall);
     return false;
   }
