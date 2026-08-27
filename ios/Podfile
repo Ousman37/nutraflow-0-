@@ -42,5 +42,23 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
     end
     flutter_additional_ios_build_settings(target)
+
+    # Must run AFTER flutter_additional_ios_build_settings — for any target
+    # that depends on the Flutter engine, that helper deliberately forces
+    # EXCLUDED_ARCHS[sdk=iphonesimulator*] back to just "i386" (so a single
+    # plugin lacking arm64-simulator support can't break the build for
+    # everyone). Apple Silicon Macs run simulators natively on arm64 — the
+    # x86_64 slice is never used here, and building it roughly doubles
+    # compile time/disk usage for the heaviest pods (gRPC-Core,
+    # BoringSSL-GRPC, abseil, Firestore internals) for nothing. Setting this
+    # last, for every target, keeps arm64/x86_64 consistent across the whole
+    # dependency graph instead of only some targets excluding it (which is
+    # what caused "Unsupported Swift architecture" — purchases_flutter still
+    # building x86_64 while RevenueCat, which it imports, only had arm64).
+    # Device/Release builds are unaffected — this only excludes the
+    # simulator SDK.
+    target.build_configurations.each do |config|
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
+    end
   end
 end
