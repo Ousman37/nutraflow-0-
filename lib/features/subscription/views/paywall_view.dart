@@ -333,6 +333,12 @@ class _PriceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final selected = ctrl.selectedPlan.value;
+      // isLoadingOfferings/offeringsFailed are read here so this whole card
+      // rebuilds on every state change — the price Text is never allowed to
+      // show the "···" not-loaded placeholder to the user.
+      final loading = ctrl.isLoadingOfferings.value;
+      final failed = ctrl.offeringsFailed.value;
+
       return Column(
         children: [
           // ── Yearly card ──────────────────────────────────────────────────
@@ -341,7 +347,8 @@ class _PriceCard extends StatelessWidget {
             badge: 'BEST VALUE',
             title: 'Yearly',
             subtitle: 'Billed once a year · Cancel anytime',
-            price: ctrl.yearlyPriceString.value,
+            price: failed ? 'Unavailable' : ctrl.yearlyPriceString.value,
+            isLoading: loading,
             perPeriod: 'per year',
             savingsLabel: _yearlySavings(ctrl),
             onTap: () => ctrl.selectedPlan.value = 'yearly',
@@ -353,7 +360,8 @@ class _PriceCard extends StatelessWidget {
             badge: null,
             title: 'Monthly',
             subtitle: 'Billed monthly · Cancel anytime',
-            price: ctrl.monthlyPriceString.value,
+            price: failed ? 'Unavailable' : ctrl.monthlyPriceString.value,
+            isLoading: loading,
             perPeriod: 'per month',
             savingsLabel: null,
             onTap: () => ctrl.selectedPlan.value = 'monthly',
@@ -381,6 +389,7 @@ class _PlanTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final String price;
+  final bool isLoading;
   final String perPeriod;
   final String? savingsLabel;
   final VoidCallback onTap;
@@ -391,6 +400,7 @@ class _PlanTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.price,
+    required this.isLoading,
     required this.perPeriod,
     required this.savingsLabel,
     required this.onTap,
@@ -494,12 +504,28 @@ class _PlanTile extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                isLoading
+                    ? const SizedBox(
+                        width: 17,
+                        height: 17,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white54,
+                        ),
+                      )
+                    : Text(
+                        price,
+                        style: TextStyle(fontFamily: 'PlusJakartaSans',
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
                 Text(
-                  price,
+                  perPeriod,
                   style: TextStyle(fontFamily: 'PlusJakartaSans',
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    fontSize: 10,
+                    color: Colors.white.withValues(alpha: 0.40),
                   ),
                 ),
                 if (savingsLabel != null)
@@ -509,14 +535,6 @@ class _PlanTile extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: AppColors.accent,
-                    ),
-                  )
-                else
-                  Text(
-                    perPeriod,
-                    style: TextStyle(fontFamily: 'PlusJakartaSans',
-                      fontSize: 10,
-                      color: Colors.white.withValues(alpha: 0.40),
                     ),
                   ),
               ],
@@ -554,29 +572,40 @@ class _BottomActions extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Primary CTA
+          // Primary CTA — spinner while purchasing or while offerings are
+          // still loading; "Retry" once loading has failed; otherwise the
+          // normal buy button. Same button, same styling throughout — only
+          // the label/tap-target change with state.
           Obx(() {
-            final busy = ctrl.isPurchasing.value;
+            final purchasing = ctrl.isPurchasing.value;
+            final loadingOfferings = ctrl.isLoadingOfferings.value;
+            final failed = ctrl.offeringsFailed.value;
+            final spinner = purchasing || loadingOfferings;
+
             return GestureDetector(
-              onTap: busy
+              onTap: spinner
                   ? null
                   : () {
                       HapticFeedback.mediumImpact();
-                      ctrl.purchase();
+                      if (failed) {
+                        ctrl.retryLoadOfferings();
+                      } else {
+                        ctrl.purchase();
+                      }
                     },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 height: 58,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: busy
+                    colors: spinner
                         ? [Colors.grey.shade800, Colors.grey.shade700]
                         : const [Color(0xFFFFB443), Color(0xFFFF8A30)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: busy
+                  boxShadow: spinner
                       ? []
                       : [
                           BoxShadow(
@@ -587,7 +616,7 @@ class _BottomActions extends StatelessWidget {
                         ],
                 ),
                 child: Center(
-                  child: busy
+                  child: spinner
                       ? const SizedBox(
                           width: 22,
                           height: 22,
@@ -596,17 +625,27 @@ class _BottomActions extends StatelessWidget {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : Obx(() => Text(
-                          ctrl.selectedPlan.value == 'yearly'
-                              ? 'Get Yearly · ${ctrl.yearlyPriceString.value}'
-                              : 'Get Monthly · ${ctrl.monthlyPriceString.value}',
-                          style: TextStyle(fontFamily: 'PlusJakartaSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            letterSpacing: 0.1,
-                          ),
-                        )),
+                      : failed
+                          ? const Text(
+                              'Retry',
+                              style: TextStyle(fontFamily: 'PlusJakartaSans',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 0.1,
+                              ),
+                            )
+                          : Obx(() => Text(
+                              ctrl.selectedPlan.value == 'yearly'
+                                  ? 'Get Yearly · ${ctrl.yearlyPriceString.value}'
+                                  : 'Get Monthly · ${ctrl.monthlyPriceString.value}',
+                              style: TextStyle(fontFamily: 'PlusJakartaSans',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 0.1,
+                              ),
+                            )),
                 ),
               ),
             );

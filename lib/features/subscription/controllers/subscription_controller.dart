@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -33,6 +34,13 @@ class SubscriptionController extends GetxController {
   final RxString selectedPlan = 'yearly'.obs;
   bool _offeringsLoaded = false;
 
+  // Drives the paywall's CTA button: spinner while an attempt is in flight,
+  // "Retry" once every retry has been exhausted without success. These are
+  // deliberately separate from isPurchasing, which is about the purchase
+  // sheet, not offerings loading.
+  final RxBool isLoadingOfferings = false.obs;
+  final RxBool offeringsFailed = false.obs;
+
   String get priceString => selectedPlan.value == 'yearly'
       ? yearlyPriceString.value
       : monthlyPriceString.value;
@@ -66,7 +74,21 @@ class SubscriptionController extends GetxController {
 
   Future<void> _initialize() async {
     try {
-      await SubscriptionService.initializeSdk();
+      final configured = await SubscriptionService.initializeSdk();
+      await _loadFreeAnalysesUsed();
+
+      if (!configured) {
+        // No usable RevenueCat key for this build. _sdkReady stays false,
+        // which is what gates every other Purchases.*-touching path in this
+        // controller (see _onAuthChanged, _fetchOfferings, purchase(),
+        // restorePurchases()) — calling any of them before configure() has
+        // run risks a native fatalError() that no try/catch can stop.
+        final cached = await _loadCachedProStatus();
+        status.value =
+            cached ? SubscriptionStatus.pro : SubscriptionStatus.free;
+        return;
+      }
+
       _sdkReady = true;
 
       // Wire up the listener BEFORE any login so no update is ever missed.
@@ -74,8 +96,6 @@ class SubscriptionController extends GetxController {
       // after purchasePackage() has already returned.
       _customerInfoListener = _onCustomerInfoUpdate;
       _service.addCustomerInfoUpdateListener(_customerInfoListener!);
-
-      await _loadFreeAnalysesUsed();
 
       final uid = _authController.currentUserId;
       if (uid.isNotEmpty) {
@@ -131,30 +151,58 @@ class SubscriptionController extends GetxController {
     monthlyPriceString.value = '···';
     yearlyPriceString.value = '···';
     _offeringsLoaded = false;
+    offeringsFailed.value = false;
   }
+
+  // Public entry point — called once at startup and again by the paywall's
+  // Retry action. Wraps the retrying attempt with the loading/failed state
+  // the UI observes, so the CTA button can show a spinner while this runs
+  // and switch to "Retry" only once every attempt below has been exhausted.
+  Future<void> _fetchOfferings() async {
+    if (!_sdkReady) {
+      // SDK was never configured (missing/invalid key) — surface this as a
+      // failure rather than leaving the paywall stuck showing a placeholder
+      // price with no explanation and no way to retry.
+      offeringsFailed.value = true;
+      return;
+    }
+    if (isLoadingOfferings.value) return; // already in flight
+
+    isLoadingOfferings.value = true;
+    try {
+      await _fetchOfferingsAttempt(retriesLeft: 3);
+    } finally {
+      isLoadingOfferings.value = false;
+    }
+  }
+
+  // Called from the paywall when the user taps "Retry" after a failed load.
+  Future<void> retryLoadOfferings() => _fetchOfferings();
 
   // Fetches offerings and resolves the monthly/yearly packages. StoreKit
   // product loading can be slow (especially cold-launch on a fresh
   // TestFlight install), so this retries a few times with a short delay
   // instead of giving up permanently after one failed/empty attempt.
-  Future<void> _fetchOfferings({int retriesLeft = 3}) async {
+  Future<void> _fetchOfferingsAttempt({required int retriesLeft}) async {
     final offerings = await _service.getOfferings();
     final current = offerings?.current;
 
     if (current == null) {
       if (retriesLeft > 0) {
         await Future.delayed(const Duration(seconds: 2));
-        return _fetchOfferings(retriesLeft: retriesLeft - 1);
+        return _fetchOfferingsAttempt(retriesLeft: retriesLeft - 1);
       }
       debugPrint('[RevenueCat] giving up after retries — no current offering. '
           'Check RevenueCat → Offerings for one marked "current", and that '
           'App Store Connect subscriptions are in "Ready to Submit"/approved '
           'state (unapproved products often fail to load from sandbox/TestFlight).');
+      offeringsFailed.value = true;
       return;
     }
 
     final packageSummary = current.availablePackages
-        .map((p) => '${p.identifier} -> ${p.storeProduct.identifier}')
+        .map((p) => '${p.identifier} -> ${p.storeProduct.identifier} '
+            '(${p.storeProduct.priceString})')
         .join(', ');
     debugPrint('[RevenueCat] resolving packages from offering '
         '"${current.identifier}": $packageSummary');
@@ -181,9 +229,15 @@ class SubscriptionController extends GetxController {
 
     if (monthly != null || yearly != null) {
       _offeringsLoaded = true;
+      offeringsFailed.value = false;
     } else if (retriesLeft > 0) {
       await Future.delayed(const Duration(seconds: 2));
-      return _fetchOfferings(retriesLeft: retriesLeft - 1);
+      return _fetchOfferingsAttempt(retriesLeft: retriesLeft - 1);
+    } else {
+      debugPrint('[RevenueCat] giving up after retries — offering '
+          '"${current.identifier}" has packages but none are typed '
+          '"Monthly" or "Annual".');
+      offeringsFailed.value = true;
     }
   }
 
@@ -249,6 +303,20 @@ class SubscriptionController extends GetxController {
       : monthlyPackage.value;
 
   Future<void> purchase() async {
+    if (!_sdkReady) {
+      debugPrint('[RevenueCat] purchase() aborted — SDK was never '
+          'configured (missing/invalid API key). Not calling any '
+          'Purchases.* API.');
+      Get.snackbar(
+        'Not Available',
+        'Subscription products are loading. Please try again shortly.',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+      return;
+    }
+
     var pkg = _resolveSelectedPackage();
 
     if (pkg == null && !_offeringsLoaded) {
@@ -258,7 +326,7 @@ class SubscriptionController extends GetxController {
       // network/StoreKit has often caught up.
       debugPrint('[RevenueCat] purchase() tapped before offerings loaded — '
           'retrying fetch once before failing.');
-      await _fetchOfferings(retriesLeft: 0);
+      await _fetchOfferings();
       pkg = _resolveSelectedPackage();
     }
 
@@ -279,28 +347,7 @@ class SubscriptionController extends GetxController {
     isPurchasing.value = true;
     try {
       final info = await _service.purchasePackage(pkg);
-
-      // Always close the paywall — the transaction was accepted by the store.
-      Get.back();
-
-      if (_service.isActiveFromInfo(info)) {
-        // Entitlement confirmed immediately (common on device/prod)
-        status.value = SubscriptionStatus.pro;
-        await _persistProStatus(true);
-        _showProWelcome();
-      } else {
-        // Store accepted the purchase but RC hasn't confirmed the entitlement
-        // yet (common in sandbox). The _onCustomerInfoUpdate listener will
-        // handle the final unlock — show a brief holding message.
-        Get.snackbar(
-          'Activating subscription…',
-          'Your Pro access is being confirmed, just a moment.',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 5),
-          margin: const EdgeInsets.all(16),
-          borderRadius: 12,
-        );
-      }
+      await _handlePurchaseResult(info, isRestore: false);
     } on PlatformException catch (e) {
       if (!_service.isCancellation(e)) {
         Get.snackbar(
@@ -318,25 +365,101 @@ class SubscriptionController extends GetxController {
     }
   }
 
+  // Shared post-purchase/post-restore entitlement handling.
+  //
+  // 1. Checks the CustomerInfo returned by the purchase/restore call itself
+  //    — on device/production this is normally already up to date.
+  // 2. If the entitlement isn't active there yet (RevenueCat's backend can
+  //    still be finishing receipt processing — common in sandbox, occasional
+  //    on device), makes exactly ONE getCustomerInfo() fallback call, bounded
+  //    by an 8s timeout. This never waits indefinitely: the fallback either
+  //    resolves, times out, or errors, and every path continues immediately.
+  // 3. The passive _onCustomerInfoUpdate listener (registered at startup)
+  //    remains as a final backstop for confirmations that arrive even later
+  //    — but nothing in this method blocks waiting on it.
+  Future<void> _handlePurchaseResult(
+    CustomerInfo info, {
+    required bool isRestore,
+  }) async {
+    final action = isRestore ? 'restore' : 'purchase';
+
+    if (_service.isActiveFromInfo(info)) {
+      debugPrint('[RevenueCat] entitlement active immediately in $action result.');
+      await _activatePro(isRestore: isRestore);
+      return;
+    }
+
+    debugPrint('[RevenueCat] entitlement not active in $action result — '
+        'trying one getCustomerInfo() fallback (8s timeout).');
+    try {
+      final refreshed =
+          await _service.getCustomerInfo().timeout(const Duration(seconds: 8));
+      if (_service.isActiveFromInfo(refreshed)) {
+        debugPrint('[RevenueCat] entitlement confirmed via fallback fetch.');
+        await _activatePro(isRestore: isRestore);
+        return;
+      }
+      debugPrint('[RevenueCat] entitlement still not active after fallback fetch.');
+    } on TimeoutException {
+      debugPrint('[RevenueCat] getCustomerInfo() fallback timed out after '
+          '8s — not waiting any longer.');
+    } catch (e) {
+      debugPrint('[RevenueCat] getCustomerInfo() fallback failed: $e');
+    }
+
+    if (isRestore) {
+      // Stay on the paywall — nothing to activate, let the user try again.
+      Get.snackbar(
+        'No Purchases Found',
+        'No active subscription found for this account.',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+    } else {
+      // Close the paywall regardless — the store already accepted the
+      // transaction. The _onCustomerInfoUpdate listener will handle the
+      // final unlock whenever RevenueCat's backend catches up.
+      Get.back();
+      Get.snackbar(
+        'Activating subscription…',
+        'Your Pro access is being confirmed and will unlock shortly.',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 5),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+    }
+  }
+
+  Future<void> _activatePro({required bool isRestore}) async {
+    status.value = SubscriptionStatus.pro;
+    await _persistProStatus(true);
+    Get.back();
+    _showProWelcome(isRestore: isRestore);
+  }
+
   Future<void> restorePurchases() async {
+    if (!_sdkReady) {
+      debugPrint('[RevenueCat] restorePurchases() aborted — SDK was never '
+          'configured (missing/invalid API key). Not calling any '
+          'Purchases.* API.');
+      Get.snackbar(
+        'Restore Failed',
+        'Unable to restore purchases. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+      return;
+    }
+
     isRestoring.value = true;
     try {
       final info = await _service.restorePurchases();
-      if (_service.isActiveFromInfo(info)) {
-        status.value = SubscriptionStatus.pro;
-        await _persistProStatus(true);
-        Get.back();
-        _showProWelcome(isRestore: true);
-      } else {
-        Get.snackbar(
-          'No Purchases Found',
-          'No active subscription found for this account.',
-          snackPosition: SnackPosition.BOTTOM,
-          margin: const EdgeInsets.all(16),
-          borderRadius: 12,
-        );
-      }
-    } catch (_) {
+      await _handlePurchaseResult(info, isRestore: true);
+    } catch (e) {
+      debugPrint('[RevenueCat] restorePurchases() failed: $e');
       Get.snackbar(
         'Restore Failed',
         'Unable to restore purchases. Please try again.',
@@ -366,13 +489,37 @@ class SubscriptionController extends GetxController {
 
   // ── Gating helpers ─────────────────────────────────────────────────────────
 
-  bool requirePro() {
+  // If entitlement status is still loading (e.g. right at app launch, before
+  // RevenueCat/Firestore have responded), waits briefly for it to resolve
+  // instead of letting callers treat "loading" as "not entitled". This is
+  // the fix for Pro users occasionally seeing the paywall again: previously
+  // a gate checked right after launch could catch status mid-flight and
+  // wrongly conclude the user wasn't subscribed. Bounded so a slow/failed
+  // network never hangs the UI — _initialize()'s own fallback-to-cache path
+  // typically resolves status well within this window anyway.
+  Future<void> _awaitStatusResolved({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    if (status.value != SubscriptionStatus.loading) return;
+    try {
+      await status.stream
+          .firstWhere((s) => s != SubscriptionStatus.loading)
+          .timeout(timeout);
+    } catch (_) {
+      // Timed out (or the stream closed) — proceed with whatever status
+      // is currently set rather than waiting any longer.
+    }
+  }
+
+  Future<bool> requirePro() async {
+    await _awaitStatusResolved();
     if (isPro) return true;
     Get.toNamed(AppRoutes.paywall);
     return false;
   }
 
-  bool requireMealAccess() {
+  Future<bool> requireMealAccess() async {
+    await _awaitStatusResolved();
     if (canLogMeal) return true;
     Get.toNamed(AppRoutes.paywall);
     return false;

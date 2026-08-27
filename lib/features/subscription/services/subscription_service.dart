@@ -5,29 +5,89 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../subscription_config.dart';
 
 class SubscriptionService {
-  // Call once at startup — only initializes the SDK, no user linked yet.
-  static Future<void> initializeSdk() async {
-    final apiKey = Platform.isIOS
+  // Guards against configuring the SDK more than once, regardless of how
+  // many times initializeSdk() ends up being called.
+  static bool _configured = false;
+
+  // Only ever logs the key's store prefix (e.g. "appl_") — never any part
+  // of the actual secret body.
+  static String _safePrefixFor(String key) {
+    final cut = key.indexOf('_');
+    return cut == -1 ? '(unrecognized format)' : key.substring(0, cut + 1);
+  }
+
+  // Picks the key to use for this platform + build mode. Returns null if no
+  // valid key is available — callers must NOT fall back to a test key or an
+  // empty string; RevenueCat's SDK can hard-crash on launch if configured
+  // with a Test Store key in a real Release/TestFlight/App Store build.
+  static String? _resolveApiKey() {
+    final configuredKey = Platform.isIOS
         ? SubscriptionConfig.iosApiKey
         : SubscriptionConfig.androidApiKey;
+    final realPrefix = Platform.isIOS ? 'appl_' : 'goog_';
 
-    // RevenueCat public SDK keys are always prefixed `appl_` (iOS) or
-    // `goog_` (Android) — anything else is a placeholder that was never
-    // replaced with the real key from app.revenuecat.com.
-    final expectedPrefix = Platform.isIOS ? 'appl_' : 'goog_';
-    if (!apiKey.startsWith(expectedPrefix)) {
-      debugPrint(
-          '[RevenueCat] WARNING: iosApiKey/androidApiKey does not look like a '
-          'real RevenueCat key (expected prefix "$expectedPrefix", got '
-          '"$apiKey"). Purchases.configure() will "succeed" locally but every '
-          'server call (getOfferings, purchase, restore) will fail auth. '
-          'Replace it with the real key from RevenueCat → Project → Apps.');
+    if (configuredKey.startsWith(realPrefix)) {
+      return configuredKey;
     }
 
+    // A Test Store key ("test_...") is only ever acceptable in a true debug
+    // build, and only because the developer put it in their own local .env
+    // on purpose — never as a silent fallback, and never in release/profile.
+    if (kDebugMode && configuredKey.startsWith('test_')) {
+      debugPrint('[RevenueCat] Using a Test Store key — debug build only. '
+          'This must never happen in a release/TestFlight/App Store build.');
+      return configuredKey;
+    }
+
+    if (configuredKey.isEmpty) {
+      debugPrint('[RevenueCat] No REVENUECAT_${Platform.isIOS ? "IOS" : "ANDROID"}_API_KEY '
+          'set in .env — subscription features will be unavailable.');
+    } else {
+      debugPrint('[RevenueCat] Configured key has prefix '
+          '"${_safePrefixFor(configuredKey)}", expected "$realPrefix" '
+          '(kDebugMode=$kDebugMode). Refusing to use it — subscription '
+          'features will be unavailable rather than risk configuring the '
+          'SDK with a wrong/test key in this build.');
+    }
+    return null;
+  }
+
+  // Whether Purchases.configure() has actually run. Callers MUST check this
+  // (or the bool this method returns) before calling any other Purchases.*
+  // API — PurchasesHybridCommon enforces "configured before use" with a
+  // native Swift fatalError(), which is a hard process crash that no Dart
+  // or native try/catch can intercept. There is no safe way to "handle" that
+  // error after the fact; the only fix is to never make the call.
+  static bool get isConfigured => _configured;
+
+  // Call once at startup — only initializes the SDK, no user linked yet.
+  // Idempotent: a second call is a safe no-op. Returns whether the SDK is
+  // actually configured and safe to call other Purchases.* methods on.
+  static Future<bool> initializeSdk() async {
+    if (_configured) {
+      debugPrint('[RevenueCat] initializeSdk() called again — already '
+          'configured, ignoring.');
+      return true;
+    }
+
+    final apiKey = _resolveApiKey();
+    if (apiKey == null) {
+      // Graceful failure: do not call Purchases.configure() at all, and the
+      // caller must not call anything else in this class either. The app
+      // keeps running; SubscriptionController treats this the same as a
+      // network failure and falls back to cached pro status.
+      return false;
+    }
+
+    debugPrint('[RevenueCat] configure() starting — key prefix '
+        '"${_safePrefixFor(apiKey)}", '
+        '${kReleaseMode ? "release" : kProfileMode ? "profile" : "debug"} build.');
     await Purchases.setLogLevel(LogLevel.debug);
     await Purchases.configure(PurchasesConfiguration(apiKey));
-    debugPrint('[RevenueCat] configure() completed (key: '
-        '${apiKey.substring(0, apiKey.length.clamp(0, 8))}…)');
+    _configured = true;
+    final appUserId = await Purchases.appUserID;
+    debugPrint('[RevenueCat] configure() completed — App User ID: $appUserId');
+    return true;
   }
 
   // Link a Firebase UID to RevenueCat so purchase history follows the user.
@@ -48,7 +108,12 @@ class SubscriptionService {
         .containsKey(SubscriptionConfig.entitlementId);
   }
 
-  Future<CustomerInfo> getCustomerInfo() => Purchases.getCustomerInfo();
+  Future<CustomerInfo> getCustomerInfo() async {
+    final info = await Purchases.getCustomerInfo();
+    debugPrint('[RevenueCat] getCustomerInfo() — active entitlements: '
+        '${info.entitlements.active.keys}');
+    return info;
+  }
 
   // Returns the current RevenueCat offering, or null if unavailable.
   // Logs the actual failure reason instead of swallowing it — a bad API key,
@@ -90,7 +155,12 @@ class SubscriptionService {
   }
 
   // Restores previous purchases (App Store / Play Store).
-  Future<CustomerInfo> restorePurchases() => Purchases.restorePurchases();
+  Future<CustomerInfo> restorePurchases() async {
+    final info = await Purchases.restorePurchases();
+    debugPrint('[RevenueCat] restorePurchases() — active entitlements: '
+        '${info.entitlements.active.keys}');
+    return info;
+  }
 
   bool isActiveFromInfo(CustomerInfo info) {
     final active = info.entitlements.active.containsKey(

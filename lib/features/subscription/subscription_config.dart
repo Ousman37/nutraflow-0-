@@ -1,23 +1,35 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // RevenueCat configuration
 //
+// API keys are read from `.env` (gitignored — see .env.example) and are NEVER
+// hardcoded here. This file must not contain a real or placeholder key value.
+//
 // Setup checklist:
 //   1. Create a project in app.revenuecat.com
 //   2. Add your iOS app (App Store Connect) and Android app (Google Play)
 //   3. Create products in App Store Connect / Google Play console
 //   4. Create an entitlement in RevenueCat → the ID must match [entitlementId]
 //   5. Create an offering named "default" with monthly + annual packages
-//   6. Replace the API key placeholders below with your actual keys
+//   6. In your local `.env`, set:
+//        REVENUECAT_IOS_API_KEY=appl_...
+//        REVENUECAT_ANDROID_API_KEY=goog_...
+//      Real public SDK keys only — from RevenueCat → Project → Apps → API
+//      Keys. Never a "test_..." Test Store key outside a debug build; the
+//      RevenueCat SDK can crash on launch if configured with one in a
+//      release/TestFlight/App Store build.
 //
 // ⚠️  [entitlementId] is CASE-SENSITIVE and must exactly match the RevenueCat
 //     dashboard value (RevenueCat → Entitlements → Identifier).
 //     Current value: 'nutraflow Pro'  — verify this matches your dashboard.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class SubscriptionConfig {
-  // RevenueCat public SDK keys — app.revenuecat.com → Project → Apps → API Keys
-  static const iosApiKey = 'test_gEMJkzUIcoXvVFHMBRrsbPuPgJN';
-  static const androidApiKey = 'test_gEMJkzUIcoXvVFHMBRrsbPuPgJN';
+  // Real public SDK keys, sourced from .env — see setup checklist above.
+  static String get iosApiKey => dotenv.env['REVENUECAT_IOS_API_KEY'] ?? '';
+  static String get androidApiKey =>
+      dotenv.env['REVENUECAT_ANDROID_API_KEY'] ?? '';
 
   // Must exactly match the entitlement Identifier in RevenueCat dashboard
   static const entitlementId = 'nutraflow Pro';
