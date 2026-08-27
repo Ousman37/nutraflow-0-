@@ -27,7 +27,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Nutraflow uses your camera to photograph meals for AI nutrition analysis.</string>
+	<string>NutraFlow uses your camera to scan meals, barcodes, and nutrition labels.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Nutraflow accesses your photo library so you can import meal photos for AI analysis.</string>
 	<key>UIApplicationSceneManifest</key>

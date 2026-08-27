@@ -20,7 +20,7 @@
 //
 // ⚠️  [entitlementId] is CASE-SENSITIVE and must exactly match the RevenueCat
 //     dashboard value (RevenueCat → Entitlements → Identifier).
-//     Current value: 'nutraflow Pro'  — verify this matches your dashboard.
+//     Current value: 'NutraFlow Pro'.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -32,7 +32,7 @@ class SubscriptionConfig {
       dotenv.env['REVENUECAT_ANDROID_API_KEY'] ?? '';
 
   // Must exactly match the entitlement Identifier in RevenueCat dashboard
-  static const entitlementId = 'nutraflow Pro';
+  static const entitlementId = 'NutraFlow Pro';
 
   // In-app free tier: number of complete meal logs before subscription required
   static const freeLogLimit = 3;

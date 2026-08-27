@@ -157,7 +157,7 @@ class _FloatingNav extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            height: 68,
+            height: 56,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -269,7 +269,7 @@ class _NavIcon extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 52,
-        height: 56,
+        height: 46,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

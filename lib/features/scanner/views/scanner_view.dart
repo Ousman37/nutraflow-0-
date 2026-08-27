@@ -1,13 +1,20 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 import '../../../core/constants/app_colors.dart';
 import '../../meal/controllers/add_meal_controller.dart';
 import '../../meal/services/barcode_lookup_service.dart';
 import '../../../routes/app_routes.dart';
+
+// The three states the live barcode camera can be in — the UI needs to
+// distinguish "haven't asked yet" from "asked and refused" from "refused
+// permanently", since only the last one gets an Open Settings action.
+enum _CameraPermission { unknown, granted, denied, permanentlyDenied }
 
 class ScannerView extends StatefulWidget {
   const ScannerView({super.key});
@@ -27,6 +34,7 @@ class _ScannerViewState extends State<ScannerView>
   // needed (and shouldn't keep running) for the still-photo modes.
   MobileScannerController? _barcodeController;
   bool _processingBarcode = false;
+  _CameraPermission _cameraPermission = _CameraPermission.unknown;
 
   late final AnimationController _pulseCtrl = AnimationController(
     vsync: this,
@@ -57,17 +65,66 @@ class _ScannerViewState extends State<ScannerView>
     setState(() => _modeIndex = i);
 
     if (i == _barcodeModeIndex) {
-      _barcodeController ??= MobileScannerController(
-        detectionSpeed: DetectionSpeed.noDuplicates,
-      );
+      // Never show the live MobileScanner widget until permission is
+      // confirmed granted — showing it before that (or after a denial) is
+      // exactly what produces a black/empty preview with no explanation.
+      unawaited(_ensureCameraPermission());
     } else {
       // Stop the camera when leaving Barcode mode — no reason to keep it
       // running (battery, privacy) while the user is on another tab.
       _barcodeController?.dispose();
       _barcodeController = null;
+      _cameraPermission = _CameraPermission.unknown;
     }
 
     if (i == _libraryModeIndex) _openGallery();
+  }
+
+  // Checks the current camera permission and requests it if it hasn't been
+  // decided yet. Only creates (and starts) the MobileScannerController once
+  // permission is confirmed granted — this is the actual fix for the black
+  // preview, which happened because the live camera widget was previously
+  // shown unconditionally, before permission was known to be granted.
+  Future<void> _ensureCameraPermission() async {
+    var status = await ph.Permission.camera.status;
+    debugPrint('[Scanner] camera permission status: $status');
+
+    if (status.isDenied) {
+      status = await ph.Permission.camera.request();
+      debugPrint('[Scanner] camera permission after request: $status');
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      if (status.isGranted || status.isLimited) {
+        _cameraPermission = _CameraPermission.granted;
+      } else if (status.isPermanentlyDenied || status.isRestricted) {
+        _cameraPermission = _CameraPermission.permanentlyDenied;
+      } else {
+        _cameraPermission = _CameraPermission.denied;
+      }
+    });
+
+    if (_cameraPermission == _CameraPermission.granted) {
+      try {
+        _barcodeController ??= MobileScannerController(
+          detectionSpeed: DetectionSpeed.noDuplicates,
+        );
+      } catch (e, st) {
+        // Never let a camera-initialization failure fall through silently —
+        // log it and fall back to the same "unavailable" messaging the
+        // errorBuilder shows for a running-camera failure.
+        debugPrint('[Scanner] MobileScannerController failed to initialize: '
+            '$e\n$st');
+        if (mounted) {
+          setState(() => _cameraPermission = _CameraPermission.denied);
+        }
+      }
+    } else {
+      debugPrint('[Scanner] camera permission not granted '
+          '($_cameraPermission) — not starting the live camera.');
+    }
   }
 
   // ── Barcode detection ────────────────────────────────────────────────────────
@@ -197,6 +254,9 @@ class _ScannerViewState extends State<ScannerView>
     final size = MediaQuery.of(context).size;
     final topPad = MediaQuery.of(context).padding.top;
     final isBarcodeMode = _modeIndex == _barcodeModeIndex;
+    final needsCameraPermissionUi = isBarcodeMode &&
+        (_cameraPermission == _CameraPermission.denied ||
+            _cameraPermission == _CameraPermission.permanentlyDenied);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -204,25 +264,38 @@ class _ScannerViewState extends State<ScannerView>
         fit: StackFit.expand,
         children: [
           // ── Background — live camera in Barcode mode, decorative otherwise ──
-          if (isBarcodeMode && _barcodeController != null)
+          if (isBarcodeMode && _cameraPermission == _CameraPermission.granted &&
+              _barcodeController != null)
             MobileScanner(
               controller: _barcodeController!,
               onDetect: _onBarcodeDetected,
-              errorBuilder: (context, error) => Container(
-                color: Colors.black,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  'Camera unavailable (${error.errorCode.name}). '
-                  'Enable camera access in Settings to scan barcodes.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
-                    color: Colors.white70,
+              errorBuilder: (context, error) {
+                debugPrint('[Scanner] MobileScanner errorBuilder: '
+                    '${error.errorCode.name} ${error.errorDetails?.message}');
+                return Container(
+                  color: Colors.black,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    'Camera unavailable (${error.errorCode.name}). '
+                    'Enable camera access in Settings to scan barcodes.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 14,
+                      color: Colors.white70,
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
+            )
+          else if (isBarcodeMode &&
+              (_cameraPermission == _CameraPermission.denied ||
+                  _cameraPermission == _CameraPermission.permanentlyDenied))
+            _CameraPermissionNeeded(
+              permanentlyDenied:
+                  _cameraPermission == _CameraPermission.permanentlyDenied,
+              onRetry: _ensureCameraPermission,
             )
           else
             Container(
@@ -330,37 +403,40 @@ class _ScannerViewState extends State<ScannerView>
             ),
           ),
 
-          // ── Viewfinder frame ─────────────────────────────────────────────
-          Center(
-            child: AnimatedBuilder(
-              animation: _pulseAnim,
-              builder: (_, child) => Transform.scale(
-                scale: _pulseAnim.value,
-                child: _ViewfinderFrame(
-                  size: size.width * 0.74,
+          // ── Viewfinder frame — hidden while asking for camera permission,
+          // so it doesn't visually clash with that message ───────────────
+          if (!needsCameraPermissionUi)
+            Center(
+              child: AnimatedBuilder(
+                animation: _pulseAnim,
+                builder: (_, child) => Transform.scale(
+                  scale: _pulseAnim.value,
+                  child: _ViewfinderFrame(
+                    size: size.width * 0.74,
+                  ),
                 ),
               ),
             ),
-          ),
 
           // ── Hint text ───────────────────────────────────────────────────
-          Positioned(
-            bottom: size.height * 0.28,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Text(
-                _processingBarcode ? 'Looking up product…' : _hintText,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withValues(alpha: 0.65),
+          if (!needsCameraPermissionUi)
+            Positioned(
+              bottom: size.height * 0.28,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  _processingBarcode ? 'Looking up product…' : _hintText,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.65),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
-          ),
 
           // ── Bottom controls ──────────────────────────────────────────────
           Positioned(
@@ -452,6 +528,91 @@ class _ScannerViewState extends State<ScannerView>
       default:
         return 'Choose a photo from your library';
     }
+  }
+}
+
+// ── Camera permission needed ──────────────────────────────────────────────────
+// Shown instead of the live camera in Barcode mode when permission was
+// denied — never renders the live camera view without permission, so this
+// replaces what would otherwise be a black/empty preview with an actual
+// explanation and a way to recover.
+
+class _CameraPermissionNeeded extends StatelessWidget {
+  final bool permanentlyDenied;
+  final VoidCallback onRetry;
+
+  const _CameraPermissionNeeded({
+    required this.permanentlyDenied,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.videocam_off_rounded,
+            size: 40,
+            color: Colors.white.withValues(alpha: 0.55),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Camera Access Needed',
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            permanentlyDenied
+                ? 'Camera access was denied. Enable it in Settings to scan barcodes.'
+                : 'NutraFlow needs camera access to scan barcodes.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.65),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              if (permanentlyDenied) {
+                ph.openAppSettings();
+              } else {
+                onRetry();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Text(
+                permanentlyDenied ? 'Open Settings' : 'Allow Camera Access',
+                style: const TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

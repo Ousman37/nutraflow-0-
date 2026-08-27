@@ -13,7 +13,7 @@ import '../../../routes/app_routes.dart';
 
 enum SubscriptionStatus { loading, free, pro }
 
-class SubscriptionController extends GetxController {
+class SubscriptionController extends GetxController with WidgetsBindingObserver {
   final _service = SubscriptionService();
   final _authController = Get.find<AuthController>();
   final _firestoreService = FirestoreService();
@@ -58,16 +58,41 @@ class SubscriptionController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     _initialize();
     ever<User?>(_authController.firebaseUser, _onAuthChanged);
   }
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (_customerInfoListener != null) {
       _service.removeCustomerInfoUpdateListener(_customerInfoListener!);
     }
     super.onClose();
+  }
+
+  // Re-checks entitlement status whenever the app comes back to the
+  // foreground — e.g. a subscription purchased/restored/cancelled outside
+  // this session (a different device, App Store Connect, expiry while
+  // backgrounded) is reflected promptly instead of only on next full launch.
+  // The passive CustomerInfoUpdateListener already covers most of this, but
+  // this is a direct, explicit check rather than relying solely on the SDK's
+  // own background sync timing.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _sdkReady) {
+      _refreshEntitlementOnResume();
+    }
+  }
+
+  Future<void> _refreshEntitlementOnResume() async {
+    try {
+      final info = await _service.getCustomerInfo();
+      _onCustomerInfoUpdate(info);
+    } catch (e) {
+      debugPrint('[RevenueCat] entitlement refresh on resume failed: $e');
+    }
   }
 
   // ── Initialization ─────────────────────────────────────────────────────────
