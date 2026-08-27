@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../meal/controllers/add_meal_controller.dart';
+import '../../meal/services/barcode_lookup_service.dart';
 import '../../../routes/app_routes.dart';
 
 class ScannerView extends StatefulWidget {
@@ -17,9 +19,14 @@ class ScannerView extends StatefulWidget {
 class _ScannerViewState extends State<ScannerView>
     with SingleTickerProviderStateMixin {
   final _picker = ImagePicker();
+  final _barcodeLookup = BarcodeLookupService();
   int _modeIndex = 0;
-  bool _flashOn = false;
   bool _capturing = false;
+
+  // Only created while Barcode mode is active — a live camera feed isn't
+  // needed (and shouldn't keep running) for the still-photo modes.
+  MobileScannerController? _barcodeController;
+  bool _processingBarcode = false;
 
   late final AnimationController _pulseCtrl = AnimationController(
     vsync: this,
@@ -32,45 +39,148 @@ class _ScannerViewState extends State<ScannerView>
   ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
   static const _modes = ['Scan Food', 'Barcode', 'Food Label', 'Library'];
+  static const _barcodeModeIndex = 1;
+  static const _labelModeIndex = 2;
+  static const _libraryModeIndex = 3;
 
   @override
   void dispose() {
     _pulseCtrl.dispose();
+    _barcodeController?.dispose();
     super.dispose();
   }
+
+  // ── Mode switching ──────────────────────────────────────────────────────────
+
+  void _selectMode(int i) {
+    HapticFeedback.selectionClick();
+    setState(() => _modeIndex = i);
+
+    if (i == _barcodeModeIndex) {
+      _barcodeController ??= MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+      );
+    } else {
+      // Stop the camera when leaving Barcode mode — no reason to keep it
+      // running (battery, privacy) while the user is on another tab.
+      _barcodeController?.dispose();
+      _barcodeController = null;
+    }
+
+    if (i == _libraryModeIndex) _openGallery();
+  }
+
+  // ── Barcode detection ────────────────────────────────────────────────────────
+
+  Future<void> _onBarcodeDetected(BarcodeCapture capture) async {
+    if (_processingBarcode) return;
+    final code = capture.barcodes.isEmpty
+        ? null
+        : capture.barcodes.first.rawValue;
+    if (code == null || code.isEmpty) return;
+
+    setState(() => _processingBarcode = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      final result = await _barcodeLookup.lookup(code);
+      if (!mounted) return;
+      if (Get.isRegistered<AddMealController>()) {
+        Get.find<AddMealController>().resetAnalysis();
+      }
+      await Get.toNamed(
+        AppRoutes.addMeal,
+        arguments: {'barcodeResult': result},
+      );
+    } on BarcodeProductNotFoundException {
+      if (!mounted) return;
+      Get.snackbar(
+        'Product Not Found',
+        'No nutrition data found for barcode $code. Try Scan Food or '
+            'Library instead.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Get.snackbar(
+        'Lookup Failed',
+        'Could not look up this product. Check your connection and try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade600,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+    } finally {
+      if (mounted) setState(() => _processingBarcode = false);
+    }
+  }
+
+  // ── Photo capture (Scan Food / Food Label) ───────────────────────────────────
 
   Future<void> _capture() async {
     if (_capturing) return;
     setState(() => _capturing = true);
     HapticFeedback.heavyImpact();
 
-    final picked = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 85,
-      maxWidth: 1200,
-    );
-    if (!mounted) return;
-    setState(() => _capturing = false);
-
-    if (picked != null) {
-      _navigateToAddMeal(File(picked.path));
+    try {
+      final picked = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        maxWidth: 1200,
+      );
+      if (!mounted) return;
+      if (picked != null) {
+        _navigateToAddMeal(File(picked.path), isLabel: _modeIndex == _labelModeIndex);
+      }
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      _showPermissionError(e);
+    } finally {
+      if (mounted) setState(() => _capturing = false);
     }
   }
 
   Future<void> _openGallery() async {
     HapticFeedback.lightImpact();
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-      maxWidth: 1200,
-    );
-    if (!mounted) return;
-    if (picked != null) {
-      _navigateToAddMeal(File(picked.path));
+    try {
+      final picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1200,
+      );
+      if (!mounted) return;
+      if (picked != null) {
+        _navigateToAddMeal(File(picked.path));
+      }
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      _showPermissionError(e);
     }
   }
 
-  void _navigateToAddMeal(File image) {
+  void _showPermissionError(PlatformException e) {
+    final isPhotoAccess = e.code.toLowerCase().contains('photo') ||
+        e.code.toLowerCase().contains('gallery');
+    Get.snackbar(
+      'Permission Needed',
+      isPhotoAccess
+          ? 'Photo library access is required. Enable it in Settings to import meal photos.'
+          : 'Camera access is required. Enable it in Settings to scan meals.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red.shade600,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 4),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+  }
+
+  void _navigateToAddMeal(File image, {bool isLabel = false}) {
     // If AddMealController is already registered (from a previous visit),
     // reset it first so onInit picks up the new image.
     if (Get.isRegistered<AddMealController>()) {
@@ -78,7 +188,7 @@ class _ScannerViewState extends State<ScannerView>
     }
     Get.toNamed(
       AppRoutes.addMeal,
-      arguments: {'image': image},
+      arguments: {'image': image, if (isLabel) 'isLabel': true},
     );
   }
 
@@ -86,22 +196,44 @@ class _ScannerViewState extends State<ScannerView>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final topPad = MediaQuery.of(context).padding.top;
+    final isBarcodeMode = _modeIndex == _barcodeModeIndex;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Background (dark camera-preview-like) ───────────────────────
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF0A0A0A), Color(0xFF1A1A1A)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+          // ── Background — live camera in Barcode mode, decorative otherwise ──
+          if (isBarcodeMode && _barcodeController != null)
+            MobileScanner(
+              controller: _barcodeController!,
+              onDetect: _onBarcodeDetected,
+              errorBuilder: (context, error) => Container(
+                color: Colors.black,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  'Camera unavailable (${error.errorCode.name}). '
+                  'Enable camera access in Settings to scan barcodes.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 14,
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0A0A0A), Color(0xFF1A1A1A)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
 
           // ── Top bar ─────────────────────────────────────────────────────
           Positioned(
@@ -127,10 +259,28 @@ class _ScannerViewState extends State<ScannerView>
                     ),
                   ),
                   const Spacer(),
-                  _IconBtn(
-                    icon: _flashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                    onTap: () => setState(() => _flashOn = !_flashOn),
-                  ),
+                  // Real torch control in Barcode mode (the only mode with a
+                  // live camera session this app controls); inert elsewhere,
+                  // since photo modes hand off to the system camera, which
+                  // has its own flash control this app can't drive.
+                  if (isBarcodeMode && _barcodeController != null)
+                    ValueListenableBuilder<MobileScannerState>(
+                      valueListenable: _barcodeController!,
+                      builder: (context, state, _) {
+                        final on = state.torchState == TorchState.on;
+                        return _IconBtn(
+                          icon: on
+                              ? Icons.flash_on_rounded
+                              : Icons.flash_off_rounded,
+                          onTap: () => _barcodeController!.toggleTorch(),
+                        );
+                      },
+                    )
+                  else
+                    _IconBtn(
+                      icon: Icons.flash_off_rounded,
+                      onTap: null,
+                    ),
                 ],
               ),
             ),
@@ -150,11 +300,7 @@ class _ScannerViewState extends State<ScannerView>
                 itemBuilder: (_, i) {
                   final active = i == _modeIndex;
                   return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _modeIndex = i);
-                      if (i == 3) _openGallery();
-                    },
+                    onTap: () => _selectMode(i),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       margin: const EdgeInsets.only(right: 10),
@@ -204,7 +350,7 @@ class _ScannerViewState extends State<ScannerView>
             right: 0,
             child: Center(
               child: Text(
-                _hintText,
+                _processingBarcode ? 'Looking up product…' : _hintText,
                 style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 13,
@@ -237,25 +383,30 @@ class _ScannerViewState extends State<ScannerView>
                     onTap: _openGallery,
                   ),
 
-                  // Capture button
+                  // Capture button — inert in Barcode mode, where detection
+                  // is continuous and automatic instead of shutter-driven.
                   GestureDetector(
-                    onTap: _capture,
+                    onTap: isBarcodeMode ? null : _capture,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
                       width: _capturing ? 66 : 72,
                       height: _capturing ? 66 : 72,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            spreadRadius: 4,
-                          ),
-                        ],
+                        color: isBarcodeMode
+                            ? Colors.white.withValues(alpha: 0.35)
+                            : Colors.white,
+                        boxShadow: isBarcodeMode
+                            ? []
+                            : [
+                                BoxShadow(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: 4,
+                                ),
+                              ],
                       ),
-                      child: _capturing
+                      child: _capturing || _processingBarcode
                           ? const Center(
                               child: SizedBox(
                                 width: 28,
@@ -269,20 +420,18 @@ class _ScannerViewState extends State<ScannerView>
                             )
                           : Container(
                               margin: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: AppColors.primary,
+                                color: isBarcodeMode
+                                    ? Colors.transparent
+                                    : AppColors.primary,
                               ),
                             ),
                     ),
                   ),
 
-                  // Flip/info button (placeholder)
-                  _IconBtn(
-                    icon: Icons.flip_camera_ios_outlined,
-                    size: 48,
-                    onTap: () => HapticFeedback.lightImpact(),
-                  ),
+                  // Balances the gallery button so the shutter stays centered.
+                  const SizedBox(width: 48),
                 ],
               ),
             ),
@@ -296,9 +445,9 @@ class _ScannerViewState extends State<ScannerView>
     switch (_modeIndex) {
       case 0:
         return 'Point at your meal — AI will analyze it';
-      case 1:
-        return 'Align barcode within the frame';
-      case 2:
+      case _barcodeModeIndex:
+        return 'Align barcode within the frame — scans automatically';
+      case _labelModeIndex:
         return 'Photograph the nutrition facts label';
       default:
         return 'Choose a photo from your library';
@@ -392,7 +541,7 @@ class _CornerPainter extends CustomPainter {
 
 class _IconBtn extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final double size;
 
   const _IconBtn({
@@ -414,10 +563,14 @@ class _IconBtn extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withValues(alpha: onTap == null ? 0.06 : 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.white, size: 20),
+            child: Icon(
+              icon,
+              color: Colors.white.withValues(alpha: onTap == null ? 0.35 : 1.0),
+              size: 20,
+            ),
           ),
         ),
       ),

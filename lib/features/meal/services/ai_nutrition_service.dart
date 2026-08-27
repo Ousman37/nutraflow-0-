@@ -17,6 +17,31 @@ class NotFoodImageException implements Exception {
   String toString() => message;
 }
 
+/// Thrown when a photo submitted for label analysis doesn't show a
+/// readable Nutrition Facts panel.
+class NotLabelImageException implements Exception {
+  final String message;
+  const NotLabelImageException([
+    this.message = "This doesn't look like a Nutrition Facts label. "
+        'Please photograph the label clearly, straight-on.',
+  ]);
+  @override
+  String toString() => message;
+}
+
+/// Thrown when label analysis is requested but no Claude API key is
+/// configured — there is no offline/mock fallback for this mode, since
+/// there's no text description to estimate from like there is for meals.
+class LabelAnalysisUnavailableException implements Exception {
+  final String message;
+  const LabelAnalysisUnavailableException([
+    this.message = 'Nutrition label scanning is temporarily unavailable. '
+        'Please try again later.',
+  ]);
+  @override
+  String toString() => message;
+}
+
 class AINutritionService {
   final _rng = Random();
 
@@ -36,9 +61,24 @@ class AINutritionService {
     return _estimateFromKeywords((description ?? '').toLowerCase());
   }
 
+  /// Analyzes a photographed Nutrition Facts label via Claude Vision — the
+  /// same pipeline as analyzeMeal(), with a label-reading prompt instead of
+  /// a food-identification one. No mock fallback: a label has no text
+  /// description to estimate from, so a missing API key is a hard error
+  /// rather than fabricated numbers.
+  Future<NutritionAnalysis> analyzeLabel({required String imagePath}) async {
+    final hasKey = ApiConfig.claudeApiKey.isNotEmpty &&
+        ApiConfig.claudeApiKey != 'YOUR_API_KEY_HERE';
+    if (!hasKey) {
+      throw const LabelAnalysisUnavailableException();
+    }
+    return _analyzeWithClaude(imagePath: imagePath, isLabelPhoto: true);
+  }
+
   Future<NutritionAnalysis> _analyzeWithClaude({
     required String imagePath,
     String? description,
+    bool isLabelPhoto = false,
   }) async {
     final bytes = await File(imagePath).readAsBytes();
     final base64Image = base64Encode(bytes);
@@ -50,7 +90,19 @@ class AINutritionService {
             ? 'image/webp'
             : 'image/jpeg';
 
-    final promptBuf = StringBuffer('''
+    final promptBuf = StringBuffer(isLabelPhoto
+        ? '''
+You are a nutrition analysis AI for a food tracking app.
+
+First, determine whether this image clearly shows a printed Nutrition Facts
+(or EU-style nutrition table) label. If it does NOT, return ONLY this JSON:
+{"isFood": false}
+
+If it DOES show a nutrition label, read the per-serving values exactly as
+printed (do not estimate — use the printed numbers) and identify the
+product name from the packaging if visible.
+'''
+        : '''
 You are a nutrition analysis AI for a food tracking app.
 
 First, determine whether this image contains food or drink (including water, juice, smoothies, coffee, etc.).
@@ -131,8 +183,9 @@ Return ONLY valid JSON — no markdown, no code fences, no extra text:
     final cleaned = text.replaceAll(RegExp(r'```[a-z]*\n?'), '').trim();
     final n = jsonDecode(cleaned) as Map<String, dynamic>;
 
-    // Reject non-food images
+    // Reject images that don't match what this mode expects.
     if (n['isFood'] == false) {
+      if (isLabelPhoto) throw const NotLabelImageException();
       throw const NotFoodImageException();
     }
 

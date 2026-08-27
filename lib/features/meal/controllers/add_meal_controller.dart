@@ -32,11 +32,27 @@ class AddMealController extends GetxController {
   void onInit() {
     super.onInit();
     _suggestMealType();
-    // Pre-load an image passed from the scanner screen.
     final args = Get.arguments;
-    if (args is Map && args['image'] is File) {
-      selectedImage.value = args['image'] as File;
-      WidgetsBinding.instance.addPostFrameCallback((_) => analyzeWithImage());
+    if (args is Map) {
+      // Barcode mode already resolved a full result via BarcodeLookupService
+      // before navigating here — skip straight to the review step instead
+      // of re-running (or duplicating) any analysis logic.
+      final barcodeResult = args['barcodeResult'];
+      if (barcodeResult is NutritionAnalysis) {
+        analysisResult.value = barcodeResult;
+        mealName.value = barcodeResult.foodName;
+        currentStep.value = 1;
+        return;
+      }
+      // Pre-loaded image from the scanner screen — either a meal photo
+      // (Scan Food / Library) or a nutrition-label photo (Food Label).
+      if (args['image'] is File) {
+        selectedImage.value = args['image'] as File;
+        final isLabel = args['isLabel'] == true;
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => isLabel ? analyzeLabelImage() : analyzeWithImage(),
+        );
+      }
     }
   }
 
@@ -92,7 +108,7 @@ class AddMealController extends GetxController {
   Future<void> analyzeWithImage() async {
     if (selectedImage.value == null) return;
     if (Get.isRegistered<SubscriptionController>() &&
-        !Get.find<SubscriptionController>().requireMealAccess()) {
+        !await Get.find<SubscriptionController>().requireMealAccess()) {
       return;
     }
     try {
@@ -136,6 +152,69 @@ class AddMealController extends GetxController {
     }
   }
 
+  // Same shape as analyzeWithImage(), routed through AINutritionService's
+  // label-reading prompt instead of its food-identification one — no
+  // separate analysis pipeline, just a different Claude Vision instruction.
+  Future<void> analyzeLabelImage() async {
+    if (selectedImage.value == null) return;
+    if (Get.isRegistered<SubscriptionController>() &&
+        !await Get.find<SubscriptionController>().requireMealAccess()) {
+      return;
+    }
+    try {
+      isAnalyzing.value = true;
+      currentStep.value = 1;
+      final result =
+          await _aiService.analyzeLabel(imagePath: selectedImage.value!.path);
+      analysisResult.value = result;
+      if (mealName.value.isEmpty) {
+        mealName.value =
+            result.foodName.isNotEmpty ? result.foodName : 'Scanned label';
+      }
+      if (Get.isRegistered<SubscriptionController>()) {
+        Get.find<SubscriptionController>().recordAnalysis();
+      }
+    } on NotLabelImageException catch (e) {
+      isAnalyzing.value = false;
+      currentStep.value = 0;
+      selectedImage.value = null;
+      Get.back(); // return to scanner
+      Get.snackbar(
+        'Not a Nutrition Label',
+        e.message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+      return;
+    } on LabelAnalysisUnavailableException catch (e) {
+      isAnalyzing.value = false;
+      currentStep.value = 0;
+      selectedImage.value = null;
+      Get.back();
+      Get.snackbar(
+        'Unavailable',
+        e.message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade600,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
+      return;
+    } catch (e) {
+      Get.snackbar('Analysis Failed', e.toString(),
+          snackPosition: SnackPosition.BOTTOM);
+      currentStep.value = 0;
+    } finally {
+      isAnalyzing.value = false;
+    }
+  }
+
   Future<void> analyzeFromDescription() async {
     final desc = descriptionController.text.trim();
     if (desc.isEmpty) {
@@ -144,7 +223,7 @@ class AddMealController extends GetxController {
       return;
     }
     if (Get.isRegistered<SubscriptionController>() &&
-        !Get.find<SubscriptionController>().requireMealAccess()) {
+        !await Get.find<SubscriptionController>().requireMealAccess()) {
       return;
     }
     try {
