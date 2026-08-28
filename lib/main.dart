@@ -53,6 +53,20 @@ class NutraFlowApp extends StatelessWidget {
       getPages: AppPages.pages,
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
+      // Respects the device's Dynamic Type/accessibility text-size setting,
+      // but clamped to a range this app's fixed-height cards and tightly
+      // laid-out rows can absorb without clipping/overflow — below 1.0 the
+      // app's own typography bump (see AppTextStyles) would undo itself,
+      // above 1.25 several dense cards start to overflow.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: mq.textScaler.clamp(minScaleFactor: 1.0, maxScaleFactor: 1.25),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

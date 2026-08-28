@@ -1,12 +1,22 @@
+import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../controllers/profile_controller.dart';
+import '../../home/controllers/home_controller.dart';
 import '../../onboarding/models/onboarding_data.dart';
+import '../../subscription/controllers/subscription_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/legal_links.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../routes/app_routes.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -30,13 +40,34 @@ class ProfileView extends StatelessWidget {
                 _Header(ctrl: ctrl),
                 const SizedBox(height: 20),
                 _ProfileHeader(ctrl: ctrl),
-                const SizedBox(height: 20),
+                const SizedBox(height: 28),
+
+                _SectionLabel('GOALS & PREFERENCES'),
+                const SizedBox(height: 10),
                 _TargetsCard(ctrl: ctrl),
                 const SizedBox(height: 16),
                 _InfoCard(ctrl: ctrl),
                 const SizedBox(height: 16),
                 _GoalActivityCard(ctrl: ctrl),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
+
+                _SectionLabel('SUBSCRIPTION'),
+                const SizedBox(height: 10),
+                const _SubscriptionCard(),
+                const SizedBox(height: 28),
+
+                _SectionLabel('NOTIFICATIONS'),
+                const SizedBox(height: 10),
+                const _NotificationsCard(),
+                const SizedBox(height: 28),
+
+                _SectionLabel('PRIVACY & LEGAL'),
+                const SizedBox(height: 10),
+                const _LegalCard(),
+                const SizedBox(height: 28),
+
+                _SectionLabel('ACCOUNT'),
+                const SizedBox(height: 10),
                 GradientButton(
                   text: 'Sign Out',
                   gradient: [AppColors.error, const Color(0xFFFF9F43)],
@@ -102,7 +133,7 @@ class _Header extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          Expanded(child: Text('Profile', style: AppTextStyles.displayMedium)),
+          Expanded(child: Text('Settings', style: AppTextStyles.displayMedium)),
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
@@ -145,6 +176,79 @@ class _ProfileHeader extends StatelessWidget {
   final ProfileController ctrl;
   const _ProfileHeader({required this.ctrl});
 
+  void _showPhotoSourceSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDDE0EE),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Change Profile Photo',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _PhotoSourceOption(
+              icon: PhosphorIcons.camera(),
+              label: 'Take Photo',
+              onTap: () {
+                Get.back();
+                ctrl.pickAndUploadProfilePhoto(source: ImageSource.camera);
+              },
+            ),
+            const SizedBox(height: 10),
+            _PhotoSourceOption(
+              icon: PhosphorIcons.image(),
+              label: 'Choose from Library',
+              onTap: () {
+                Get.back();
+                ctrl.pickAndUploadProfilePhoto(source: ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+    );
+  }
+
+  Widget _initialsAvatar() {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.2),
+      child: Center(
+        child: Text(
+          ctrl.name.isNotEmpty ? ctrl.name[0].toUpperCase() : '?',
+          style: AppTextStyles.displayMedium.copyWith(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -166,32 +270,168 @@ class _ProfileHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                ctrl.name.isNotEmpty ? ctrl.name[0].toUpperCase() : '?',
-                style: AppTextStyles.displayMedium.copyWith(
-                  color: Colors.white,
+          GestureDetector(
+            onTap: () => _showPhotoSourceSheet(context),
+            child: Obx(() {
+              final photoUrl = ctrl.profileObs.value?.photoUrl;
+              final uploading = ctrl.isUploadingPhoto.value;
+              return SizedBox(
+                width: 68,
+                height: 68,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipOval(
+                      child: SizedBox(
+                        width: 64,
+                        height: 64,
+                        child: (photoUrl != null && photoUrl.isNotEmpty)
+                            ? CachedNetworkImage(
+                                imageUrl: photoUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, _) => _initialsAvatar(),
+                                errorWidget: (_, _, _) => _initialsAvatar(),
+                              )
+                            : _initialsAvatar(),
+                      ),
+                    ),
+                    if (uploading)
+                      Positioned.fill(
+                        child: ClipOval(
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.45),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Center(
+                          child: PhosphorIcon(
+                            PhosphorIcons.camera(PhosphorIconsStyle.fill),
+                            size: 11,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
+              );
+            }),
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              ctrl.name,
-              style: AppTextStyles.headlineMedium.copyWith(
-                color: Colors.white,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ctrl.name,
+                  style: AppTextStyles.headlineMedium.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+                if (ctrl.email.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    ctrl.email,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PhotoSourceOption extends StatelessWidget {
+  final PhosphorIconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PhotoSourceOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Row(
+          children: [
+            PhosphorIcon(icon, size: 20, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Section label ─────────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textSecondary,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -266,6 +506,11 @@ class _InfoCard extends StatelessWidget {
           label: 'BMI',
           value: _bmi(profile.weightKg, profile.heightCm),
         ),
+        _InfoRow(
+          label: 'Water Goal',
+          value: '${HomeController.waterGoal} glasses '
+              '(${HomeController.waterGoal * HomeController.mlPerGlass} ml)',
+        ),
       ],
     );
   }
@@ -305,6 +550,312 @@ class _GoalActivityCard extends StatelessWidget {
             value: profile.dietaryPreferences.join(', '),
           ),
       ],
+    );
+  }
+}
+
+// ── Subscription card ─────────────────────────────────────────────────────────
+// RevenueCat CustomerInfo (via SubscriptionController) is the sole source of
+// truth here — never a cached/local boolean. Never shows a purchase CTA to
+// an already-active subscriber.
+
+class _SubscriptionCard extends StatelessWidget {
+  const _SubscriptionCard();
+
+  Future<void> _openManageSubscription(SubscriptionController ctrl) async {
+    final url = ctrl.managementUrl.value ??
+        (Platform.isIOS
+            ? 'https://apps.apple.com/account/subscriptions'
+            : 'https://play.google.com/store/account/subscriptions');
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      Get.snackbar(
+        'Unable to open link',
+        'Please try again later.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  String? _statusLine(EntitlementInfo? e) {
+    if (e == null) return null;
+    final expires = e.expirationDate;
+    DateTime? expiresAt;
+    try {
+      expiresAt = expires != null ? DateTime.parse(expires).toLocal() : null;
+    } catch (_) {}
+    final formatted =
+        expiresAt != null ? DateFormat('MMM d, yyyy').format(expiresAt) : null;
+
+    if (e.periodType == PeriodType.trial) {
+      return formatted != null ? 'Free trial active — ends $formatted' : 'Free trial active';
+    }
+    if (formatted == null) return null;
+    return e.willRenew ? 'Renews $formatted' : 'Expires $formatted (auto-renew off)';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = Get.find<SubscriptionController>();
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Obx(() {
+        final isPro = ctrl.isPro;
+        final statusLine = _statusLine(ctrl.activeEntitlement.value);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: (isPro ? AppColors.primary : AppColors.textHint)
+                        .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: PhosphorIcon(
+                      PhosphorIcons.crown(PhosphorIconsStyle.fill),
+                      size: 18,
+                      color: isPro ? AppColors.primary : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isPro ? 'NutraFlow Pro' : 'Free Plan',
+                        style: AppTextStyles.headlineSmall,
+                      ),
+                      Text(
+                        isPro ? (statusLine ?? 'Active') : 'Not subscribed',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                if (isPro)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'ACTIVE',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (isPro) ...[
+              _SettingsActionRow(
+                icon: PhosphorIcons.gear(),
+                label: 'Manage Subscription',
+                onTap: () => _openManageSubscription(ctrl),
+              ),
+              const Divider(height: 1),
+              Obx(() => _SettingsActionRow(
+                    icon: PhosphorIcons.arrowsClockwise(),
+                    label: 'Restore Purchases',
+                    busy: ctrl.isRestoring.value,
+                    onTap: ctrl.isRestoring.value ? null : ctrl.restorePurchases,
+                  )),
+            ] else ...[
+              GradientButton(
+                text: 'Get NutraFlow Pro',
+                gradient: AppColors.primaryGradient,
+                onPressed: () => Get.toNamed(AppRoutes.paywall),
+                icon: PhosphorIcon(
+                  PhosphorIcons.crown(PhosphorIconsStyle.fill),
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Obx(() => _SettingsActionRow(
+                    icon: PhosphorIcons.arrowsClockwise(),
+                    label: 'Restore Purchases',
+                    busy: ctrl.isRestoring.value,
+                    onTap: ctrl.isRestoring.value ? null : ctrl.restorePurchases,
+                  )),
+            ],
+          ],
+        );
+      }),
+    );
+  }
+}
+
+// ── Notifications card ────────────────────────────────────────────────────────
+// Links to the existing, fully-functional notification settings screen
+// (meal/water/streak reminders) rather than duplicating its controls here.
+
+class _NotificationsCard extends StatelessWidget {
+  const _NotificationsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: _SettingsActionRow(
+        icon: PhosphorIcons.bell(),
+        label: 'Notification Preferences',
+        padding: const EdgeInsets.all(20),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Get.toNamed(AppRoutes.notificationSettings);
+        },
+      ),
+    );
+  }
+}
+
+// ── Privacy & Legal card ──────────────────────────────────────────────────────
+
+class _LegalCard extends StatelessWidget {
+  const _LegalCard();
+
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      Get.snackbar(
+        'Unable to open link',
+        'Please try again later.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _SettingsActionRow(
+            icon: PhosphorIcons.shieldCheck(),
+            label: 'Privacy Policy',
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            onTap: () => _open(LegalLinks.privacyPolicy),
+          ),
+          const Divider(height: 1, indent: 20, endIndent: 20),
+          _SettingsActionRow(
+            icon: PhosphorIcons.fileText(),
+            label: 'Terms of Use',
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            onTap: () => _open(LegalLinks.termsOfUse),
+          ),
+          const Divider(height: 1, indent: 20, endIndent: 20),
+          _SettingsActionRow(
+            icon: PhosphorIcons.lifebuoy(),
+            label: 'Support',
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            onTap: () => _open(LegalLinks.support),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Shared tappable settings row ──────────────────────────────────────────────
+
+class _SettingsActionRow extends StatelessWidget {
+  final PhosphorIconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool busy;
+  final EdgeInsetsGeometry padding;
+
+  const _SettingsActionRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.busy = false,
+    this.padding = const EdgeInsets.symmetric(vertical: 14),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticFeedback.lightImpact();
+              onTap!();
+            },
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: padding,
+        child: Row(
+          children: [
+            PhosphorIcon(icon, size: 19, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label, style: AppTextStyles.labelLarge),
+            ),
+            if (busy)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              PhosphorIcon(
+                PhosphorIcons.caretRight(),
+                size: 16,
+                color: AppColors.textHint,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -394,7 +945,7 @@ class _DeleteAccountButton extends StatelessWidget {
                         'Delete Account',
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: AppColors.error,
                         ),
@@ -725,7 +1276,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                           g[0].toUpperCase() + g.substring(1),
                           style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: sel
                                 ? Colors.white
@@ -782,7 +1333,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                             g.label,
                             style: TextStyle(
                               fontFamily: 'PlusJakartaSans',
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: sel
                                   ? AppColors.primary
@@ -839,7 +1390,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                               a.label,
                               style: TextStyle(
                                 fontFamily: 'PlusJakartaSans',
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: sel
                                     ? AppColors.primary
@@ -850,7 +1401,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                               a.description,
                               style: const TextStyle(
                                 fontFamily: 'PlusJakartaSans',
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: AppColors.textSecondary,
                               ),
                             ),
@@ -896,7 +1447,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                       opt,
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: sel
                             ? AppColors.primary
@@ -1117,7 +1668,7 @@ class _EditTargetsSheetState extends State<_EditTargetsSheet> {
                       'Reset to Calculated',
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textSecondary,
                       ),
@@ -1144,7 +1695,7 @@ class _SheetSection extends StatelessWidget {
       title,
       style: const TextStyle(
         fontFamily: 'PlusJakartaSans',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: FontWeight.w700,
         color: AppColors.textSecondary,
         letterSpacing: 0.8,
@@ -1166,7 +1717,7 @@ class _FieldRow extends StatelessWidget {
           label,
           style: const TextStyle(
             fontFamily: 'PlusJakartaSans',
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w500,
             color: AppColors.textPrimary,
           ),
@@ -1206,7 +1757,7 @@ class _SliderField extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textPrimary,
               ),
@@ -1219,7 +1770,7 @@ class _SliderField extends StatelessWidget {
                     text: displayValue,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
                     ),
@@ -1228,7 +1779,7 @@ class _SliderField extends StatelessWidget {
                     text: ' $unit',
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                     ),
@@ -1289,7 +1840,7 @@ class _Stepper extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 16,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),

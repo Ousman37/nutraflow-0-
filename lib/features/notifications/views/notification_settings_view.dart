@@ -79,7 +79,7 @@ class NotificationSettingsView extends StatelessWidget {
                 'These reminders run entirely on your device. Turning off notifications for NutraFlow in your phone settings will stop them from showing.',
                 style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w400,
                   color: AppColors.textSecondary.withValues(alpha: 0.8),
                   height: 1.5,
@@ -221,7 +221,7 @@ class _ReminderCard extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
@@ -231,7 +231,7 @@ class _ReminderCard extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w400,
                         color: AppColors.textSecondary,
                       ),
@@ -291,7 +291,7 @@ class _TimeRow extends StatelessWidget {
                 spec.label,
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: AppColors.textPrimary,
                 ),
@@ -317,7 +317,7 @@ class _TimeRow extends StatelessWidget {
                     spec.time.value.format(context),
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
                     ),

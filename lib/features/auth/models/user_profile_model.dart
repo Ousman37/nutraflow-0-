@@ -15,6 +15,7 @@ class UserProfileModel {
   final double dailyCalorieTarget;
   final MacroTargets macroTargets;
   final DateTime createdAt;
+  final String? photoUrl;
 
   const UserProfileModel({
     required this.id,
@@ -30,6 +31,7 @@ class UserProfileModel {
     required this.dailyCalorieTarget,
     required this.macroTargets,
     required this.createdAt,
+    this.photoUrl,
   });
 
   Map<String, dynamic> toMap() => {
@@ -46,6 +48,7 @@ class UserProfileModel {
         'dailyCalorieTarget': dailyCalorieTarget,
         'macroTargets': macroTargets.toMap(),
         'createdAt': createdAt.toIso8601String(),
+        'photoUrl': photoUrl,
       };
 
   factory UserProfileModel.fromMap(Map<String, dynamic> map) {
@@ -65,6 +68,7 @@ class UserProfileModel {
         Map<String, dynamic>.from(map['macroTargets']),
       ),
       createdAt: DateTime.parse(map['createdAt'] as String),
+      photoUrl: map['photoUrl'] as String?,
     );
   }
 
@@ -79,6 +83,7 @@ class UserProfileModel {
     List<String>? dietaryPreferences,
     double? dailyCalorieTarget,
     MacroTargets? macroTargets,
+    String? photoUrl,
   }) {
     return UserProfileModel(
       id: id,
@@ -94,6 +99,7 @@ class UserProfileModel {
       dailyCalorieTarget: dailyCalorieTarget ?? this.dailyCalorieTarget,
       macroTargets: macroTargets ?? this.macroTargets,
       createdAt: createdAt,
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 }

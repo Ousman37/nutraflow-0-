@@ -4,6 +4,7 @@ import '../models/user_profile_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../../onboarding/models/onboarding_data.dart';
+import '../../subscription/controllers/subscription_controller.dart';
 import '../../../core/utils/calorie_calculator.dart';
 import '../../../routes/app_routes.dart';
 
@@ -65,12 +66,28 @@ class AuthController extends GetxController {
           'email': refreshed.email ?? '',
         });
       } else {
-        if (Get.currentRoute != AppRoutes.home) {
-          Get.offAllNamed(AppRoutes.home);
-        }
+        await enterMainApp();
       }
     } catch (_) {
       Get.offAllNamed(AppRoutes.login);
+    }
+  }
+
+  // The single gate every path into the main app must go through — called
+  // here after login/resume, and from the onboarding-complete CTA
+  // (motivation_view.dart). Decides Home vs. the subscription paywall based
+  // on live RevenueCat entitlement state (never a stale local boolean).
+  // `Get.currentRoute != target` avoids an unnecessary rebuild/flash when
+  // this is called while already on the correct screen (e.g. a redundant
+  // auth-stream re-emission while the user is mid-session).
+  Future<void> enterMainApp() async {
+    final hasAccess = Get.isRegistered<SubscriptionController>()
+        ? await Get.find<SubscriptionController>().hasActiveAccess()
+        : true; // Subscription system unavailable — fail open rather than
+                 // permanently locking every user out of the app.
+    final target = hasAccess ? AppRoutes.home : AppRoutes.paywall;
+    if (Get.currentRoute != target) {
+      Get.offAllNamed(target);
     }
   }
 
