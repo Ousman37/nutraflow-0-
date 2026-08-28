@@ -1,7 +1,7 @@
 name: nutraflow
 description: "NutraFlow — AI-powered nutrition tracking app"
 publish_to: 'none'
-version: 1.0.0+14
+version: 1.0.0+15
 
 environment:
   sdk: ^3.11.5
@@ -43,6 +43,7 @@ dependencies:
   shared_preferences: ^2.3.2
   intl: ^0.19.0
   uuid: ^4.4.0
+  url_launcher: ^6.3.1
 
   # Notifications
   flutter_local_notifications: ^22.2.0
