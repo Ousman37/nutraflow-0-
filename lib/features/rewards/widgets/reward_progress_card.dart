@@ -83,11 +83,11 @@ class _StreakBadge extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('🔥', style: TextStyle(fontSize: 18)),
+          const Text('🔥', style: TextStyle(fontSize: 19)),
           Text(
             '$streak',
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
               color: Colors.white,
               height: 1.1,
@@ -114,7 +114,7 @@ class _ProgressInfo extends StatelessWidget {
           Text(
             'All milestones unlocked! 🏆',
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),
@@ -123,7 +123,7 @@ class _ProgressInfo extends StatelessWidget {
           Text(
             '$streak day streak — you\'re unstoppable',
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 11,
+              fontSize: 12,
               color: Colors.white54,
             ),
           ),
@@ -142,14 +142,14 @@ class _ProgressInfo extends StatelessWidget {
           children: [
             Text(
               info.emoji,
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 15),
             ),
             const SizedBox(width: 5),
             Expanded(
               child: Text(
                 info.title,
                 style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -174,7 +174,7 @@ class _ProgressInfo extends StatelessWidget {
               ? 'Unlocking now…'
               : '$daysLeft day${daysLeft == 1 ? '' : 's'} to go',
           style: TextStyle(fontFamily: 'PlusJakartaSans', 
-            fontSize: 11,
+            fontSize: 12,
             color: Colors.white54,
           ),
         ),

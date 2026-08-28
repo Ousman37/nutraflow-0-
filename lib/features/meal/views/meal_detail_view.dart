@@ -591,7 +591,7 @@ class _RainbowBar extends StatelessWidget {
             style: AppTextStyles.captionText.copyWith(
               color: active ? AppColors.textPrimary : AppColors.textHint,
               fontWeight: active ? FontWeight.w500 : FontWeight.w400,
-              fontSize: 10,
+              fontSize: 11,
             ),
             textAlign: TextAlign.center,
           ),
@@ -655,7 +655,7 @@ class _MacroGridCard extends StatelessWidget {
                       label,
                       style: AppTextStyles.captionText.copyWith(
                         color: AppColors.textSecondary,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ],

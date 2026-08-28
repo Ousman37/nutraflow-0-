@@ -83,7 +83,7 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
               'Type',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
               ),
@@ -103,7 +103,7 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
                   'Duration',
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary,
                   ),
@@ -113,7 +113,7 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
                   '$_durationMinutes min',
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primary,
                   ),
@@ -159,7 +159,7 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
                     'Estimated ${_estimatedCalories().round()} kcal burned',
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                     ),
@@ -175,7 +175,7 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
               'Notes (optional)',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
               ),
@@ -186,7 +186,7 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
               maxLines: 2,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
+                fontSize: 15,
                 color: AppColors.textPrimary,
               ),
               decoration: InputDecoration(
@@ -194,7 +194,7 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
                 hintStyle: TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   color: AppColors.textHint,
-                  fontSize: 13,
+                  fontSize: 14,
                 ),
                 filled: true,
                 fillColor: AppColors.inputFill,
@@ -271,7 +271,7 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
                                   'Save Workout',
                                   style: TextStyle(
                                     fontFamily: 'PlusJakartaSans',
-                                    fontSize: 16,
+                                    fontSize: 17,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
                                   ),
@@ -339,7 +339,7 @@ class _WorkoutTypeGrid extends StatelessWidget {
                   type.label,
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: isSelected
                         ? AppColors.primary

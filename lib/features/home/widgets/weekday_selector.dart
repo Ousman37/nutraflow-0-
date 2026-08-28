@@ -45,7 +45,7 @@ class WeekdaySelector extends StatelessWidget {
                         child: Text(
                           _labels[i],
                           style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: isSelected
                                 ? FontWeight.w700
                                 : FontWeight.w400,

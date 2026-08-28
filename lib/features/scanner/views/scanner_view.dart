@@ -282,7 +282,7 @@ class _ScannerViewState extends State<ScannerView>
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 14,
+                      fontSize: 15,
                       color: Colors.white70,
                     ),
                   ),
@@ -326,7 +326,7 @@ class _ScannerViewState extends State<ScannerView>
                     'NutraFlow Scanner',
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -389,7 +389,7 @@ class _ScannerViewState extends State<ScannerView>
                         _modes[i],
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: active
                               ? Colors.white
@@ -429,7 +429,7 @@ class _ScannerViewState extends State<ScannerView>
                   _processingBarcode ? 'Looking up product…' : _hintText,
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: Colors.white.withValues(alpha: 0.65),
                   ),
@@ -565,7 +565,7 @@ class _CameraPermissionNeeded extends StatelessWidget {
             'Camera Access Needed',
             style: TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 16,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
@@ -578,7 +578,7 @@ class _CameraPermissionNeeded extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 13,
+              fontSize: 14,
               color: Colors.white.withValues(alpha: 0.65),
               height: 1.4,
             ),
@@ -603,7 +603,7 @@ class _CameraPermissionNeeded extends StatelessWidget {
                 permanentlyDenied ? 'Open Settings' : 'Allow Camera Access',
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),

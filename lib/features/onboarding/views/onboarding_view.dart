@@ -154,7 +154,7 @@ class OnboardingView extends StatelessWidget {
                 Text(
                   'Cancel',
                   style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF3D60D8),
                   ),
@@ -414,7 +414,7 @@ class _GoalStep extends StatelessWidget {
                 'Select the option that fits your situation',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w400,
                   color: Colors.white.withValues(alpha: 0.75),
                 ),
@@ -487,7 +487,7 @@ class _GoalPill extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight:
                       isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: Colors.white,

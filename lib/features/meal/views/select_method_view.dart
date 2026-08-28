@@ -143,7 +143,7 @@ class SelectMethodView extends StatelessWidget {
         Text(
           'Add your meal in the most convenient way',
           style: TextStyle(fontFamily: 'PlusJakartaSans', 
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w400,
             color: Colors.white.withValues(alpha: 0.65),
           ),
@@ -202,7 +202,7 @@ class SelectMethodView extends StatelessWidget {
           Text(
             'Cancel',
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
               color: Colors.white.withValues(alpha: 0.75),
             ),
@@ -236,7 +236,7 @@ class _MethodPill extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 16,
+              fontSize: 17,
               fontWeight: FontWeight.w500,
               color: Colors.white,
             ),

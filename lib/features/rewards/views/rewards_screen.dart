@@ -32,7 +32,7 @@ class RewardsScreen extends StatelessWidget {
                     Text(
                       'YOUR MILESTONES',
                       style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Colors.white38,
                         letterSpacing: 1.4,
@@ -163,7 +163,7 @@ class _StatCell extends StatelessWidget {
               Text(
                 unit,
                 style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                  fontSize: 12,
+                  fontSize: 13,
                   color: Colors.white54,
                 ),
               ),
@@ -173,7 +173,7 @@ class _StatCell extends StatelessWidget {
           Text(
             label,
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 11,
+              fontSize: 12,
               color: Colors.white38,
             ),
           ),
@@ -223,7 +223,7 @@ class _BadgeCard extends StatelessWidget {
                       child: Text(
                         info.title,
                         style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: isUnlocked ? Colors.white : Colors.white60,
                         ),
@@ -240,7 +240,7 @@ class _BadgeCard extends StatelessWidget {
                         child: Text(
                           'Unlocked',
                           style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: info.color1,
                           ),
@@ -252,7 +252,7 @@ class _BadgeCard extends StatelessWidget {
                 Text(
                   info.description,
                   style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                    fontSize: 11,
+                    fontSize: 12,
                     color: Colors.white38,
                     height: 1.4,
                   ),
@@ -272,7 +272,7 @@ class _BadgeCard extends StatelessWidget {
                   Text(
                     _progressLabel(currentStreak),
                     style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                      fontSize: 11,
+                      fontSize: 12,
                       color: Colors.white38,
                     ),
                   ),
@@ -280,7 +280,7 @@ class _BadgeCard extends StatelessWidget {
                   Text(
                     'Achieved ${DateFormat('d MMM yyyy').format(reward.unlockedAt!)}',
                     style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                      fontSize: 11,
+                      fontSize: 12,
                       color: info.color1.withValues(alpha: 0.65),
                     ),
                   ),

@@ -157,7 +157,7 @@ class _WeekDateStrip extends StatelessWidget {
                       _labels[i],
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: isSelected
                             ? AppColors.primary
@@ -180,7 +180,7 @@ class _WeekDateStrip extends StatelessWidget {
                           '${day.day}',
                           style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: isSelected || isToday
                                 ? FontWeight.w700
                                 : FontWeight.w500,
@@ -242,7 +242,7 @@ class _NutritionSummaryCard extends StatelessWidget {
                   "Today's Nutrition",
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
@@ -252,7 +252,7 @@ class _NutritionSummaryCard extends StatelessWidget {
                   '${cals.round()} kcal',
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primary,
                   ),
@@ -313,7 +313,7 @@ class _MacroChip extends StatelessWidget {
               '${value.round()}g',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
@@ -323,7 +323,7 @@ class _MacroChip extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textSecondary,
               ),
@@ -373,7 +373,7 @@ class _MealSection extends StatelessWidget {
                       timeLabel,
                       style: const TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textSecondary,
                       ),
@@ -423,7 +423,7 @@ class _MealSection extends StatelessWidget {
                             mealType.label,
                             style: const TextStyle(
                               fontFamily: 'PlusJakartaSans',
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
@@ -434,7 +434,7 @@ class _MealSection extends StatelessWidget {
                               '${totalCals.round()} kcal',
                               style: const TextStyle(
                                 fontFamily: 'PlusJakartaSans',
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w500,
                                 color: AppColors.textSecondary,
                               ),
@@ -463,7 +463,7 @@ class _MealSection extends StatelessWidget {
                                     'Add',
                                     style: TextStyle(
                                       fontFamily: 'PlusJakartaSans',
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.primary,
                                     ),
@@ -524,7 +524,7 @@ class _EmptyMealSlot extends StatelessWidget {
               'Log ${mealType.label.toLowerCase()}',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textSecondary.withValues(alpha: 0.7),
               ),
@@ -636,7 +636,7 @@ class _MealCard extends StatelessWidget {
                             meal.name,
                             style: const TextStyle(
                               fontFamily: 'PlusJakartaSans',
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
@@ -665,7 +665,7 @@ class _MealCard extends StatelessWidget {
                         '${meal.nutrition.calories.round()} kcal',
                         style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.primary,
                         ),
@@ -700,7 +700,7 @@ class _MealCard extends StatelessWidget {
                 _formatTime(meal.createdAt),
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: AppColors.textSecondary,
                 ),
@@ -740,7 +740,7 @@ class _MacroDot extends StatelessWidget {
           '${value.round()}g',
           style: const TextStyle(
             fontFamily: 'PlusJakartaSans',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
             color: AppColors.textSecondary,
           ),

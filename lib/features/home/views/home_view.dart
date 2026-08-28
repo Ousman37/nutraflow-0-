@@ -1,8 +1,10 @@
 import 'dart:math';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../controllers/home_controller.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../../meals/views/meals_view.dart';
 import '../../workouts/views/workouts_view.dart';
 import '../../workouts/controllers/workouts_controller.dart';
@@ -296,7 +298,7 @@ class _NavIcon extends StatelessWidget {
               duration: const Duration(milliseconds: 260),
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 9,
+                fontSize: 10,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
                 color: Colors.white.withValues(alpha: isActive ? 1.0 : 0.38),
               ),
@@ -368,19 +370,7 @@ class _DashGreeting extends StatelessWidget {
               HapticFeedback.lightImpact();
               Get.toNamed(AppRoutes.profile);
             },
-            child: Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: AppColors.primaryGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(Icons.person_rounded, color: Colors.white, size: 24),
-            ),
+            child: const _HomeAvatar(),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -391,7 +381,7 @@ class _DashGreeting extends StatelessWidget {
                   'Welcome Back',
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w400,
                     color: AppColors.textSecondary,
                   ),
@@ -400,7 +390,7 @@ class _DashGreeting extends StatelessWidget {
                   ctrl.userName,
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
@@ -441,6 +431,47 @@ class _DashGreeting extends StatelessWidget {
   }
 }
 
+// ── Home avatar — shows the user's uploaded profile photo, or a default ────
+
+class _HomeAvatar extends StatelessWidget {
+  const _HomeAvatar();
+
+  Widget _fallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: AppColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Icon(Icons.person_rounded, color: Colors.white, size: 24),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final photoUrl = Get.find<AuthController>().userProfile.value?.photoUrl;
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 46,
+          height: 46,
+          child: (photoUrl != null && photoUrl.isNotEmpty)
+              ? CachedNetworkImage(
+                  imageUrl: photoUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => _fallback(),
+                  errorWidget: (_, _, _) => _fallback(),
+                )
+              : _fallback(),
+        ),
+      );
+    });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Today's Status Card
 // ─────────────────────────────────────────────────────────────────────────────
@@ -471,7 +502,7 @@ class _TodayStatusCard extends StatelessWidget {
             "Today's Status",
             style: TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
@@ -602,7 +633,7 @@ class _CalorieRingWidgetState extends State<_CalorieRingWidget>
                     'of ${widget.target.round()}',
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w400,
                       color: AppColors.textSecondary,
                     ),
@@ -611,7 +642,7 @@ class _CalorieRingWidgetState extends State<_CalorieRingWidget>
                     'Consumed',
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
                     ),
@@ -722,7 +753,7 @@ class _MacroProgressRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
@@ -732,7 +763,7 @@ class _MacroProgressRow extends StatelessWidget {
               '${current.round()}/${target.round()} g',
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.w400,
                 color: AppColors.textSecondary,
               ),
@@ -805,7 +836,7 @@ class _WaterIntakeCard extends StatelessWidget {
                     'of ${goal * HomeController.mlPerGlass} ml goal',
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 11,
+                      fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -894,7 +925,7 @@ class _WaterIntakeCard extends StatelessWidget {
               '$glasses of $goal glasses',
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textSecondary,
               ),
@@ -923,7 +954,7 @@ class _QuickActivityGrid extends StatelessWidget {
           "Today's Activity",
           style: TextStyle(
             fontFamily: 'PlusJakartaSans',
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
@@ -1045,7 +1076,7 @@ class _ActivityTile extends StatelessWidget {
                   label,
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary,
                   ),
@@ -1065,7 +1096,7 @@ class _ActivityTile extends StatelessWidget {
                   unit,
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w400,
                     color: AppColors.textSecondary,
                   ),
@@ -1080,7 +1111,7 @@ class _ActivityTile extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Motivation banner with female character
+// Motivation banner — clean, data-first, no character illustration
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MotivationBanner extends StatelessWidget {
@@ -1123,10 +1154,10 @@ class _MotivationBanner extends StatelessWidget {
           // Subtle decorative circles
           Positioned(
             top: -24,
-            right: 110,
+            right: -10,
             child: Container(
-              width: 90,
-              height: 90,
+              width: 130,
+              height: 130,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.05),
@@ -1145,12 +1176,25 @@ class _MotivationBanner extends StatelessWidget {
               ),
             ),
           ),
-          // Motivational text on the left
+          // Subtle abstract brand mark — replaces the character illustration
+          Positioned(
+            right: 8,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: PhosphorIcon(
+                PhosphorIcons.forkKnife(),
+                size: 84,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          // Motivational text
           Positioned(
             left: 20,
             top: 0,
             bottom: 0,
-            right: 138,
+            right: 20,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1159,65 +1203,50 @@ class _MotivationBanner extends StatelessWidget {
                   headline,
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 18,
+                    fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 6),
                 Text(
                   sub,
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w400,
                     color: Colors.white.withValues(alpha: 0.70),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.25),
+                const SizedBox(height: 14),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    Get.find<HomeController>().selectedTabIndex.value = 1;
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'View today\'s plan →',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                    child: const Text(
+                      'View today\'s plan →',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ],
-            ),
-          ),
-          // Female character — clipped to card
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            child: Image.asset(
-              'assets/images/meal_character.png',
-              width: 130,
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomCenter,
-              errorBuilder: (context, error, stack) => SizedBox(
-                width: 130,
-                child: Center(
-                  child: PhosphorIcon(
-                    PhosphorIcons.personSimpleRun(),
-                    size: 56,
-                    color: Colors.white.withValues(alpha: 0.30),
-                  ),
-                ),
-              ),
             ),
           ),
         ],

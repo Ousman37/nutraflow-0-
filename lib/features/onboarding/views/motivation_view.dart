@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../routes/app_routes.dart';
 
 class MotivationView extends StatefulWidget {
   const MotivationView({super.key});
@@ -16,6 +16,7 @@ class _MotivationViewState extends State<MotivationView>
   late AnimationController _ctrl;
   late Animation<double> _fadeAnim;
   late Animation<double> _slideAnim;
+  bool _isEntering = false;
 
   @override
   void initState() {
@@ -139,7 +140,7 @@ class _MotivationViewState extends State<MotivationView>
                     Text(
                       text,
                       style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.9),
                       ),
@@ -153,11 +154,21 @@ class _MotivationViewState extends State<MotivationView>
     );
   }
 
+  Future<void> _continue() async {
+    if (_isEntering) return;
+    setState(() => _isEntering = true);
+    // Routes to Home if entitled (active Pro or trial), otherwise to the
+    // subscription paywall — the same live-entitlement gate every other
+    // entry point into the app goes through.
+    await Get.find<AuthController>().enterMainApp();
+    if (mounted) setState(() => _isEntering = false);
+  }
+
   Widget _buildCTA() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: GestureDetector(
-        onTap: () => Get.offAllNamed(AppRoutes.home),
+        onTap: _continue,
         child: Container(
           width: double.infinity,
           height: 58,
@@ -173,14 +184,23 @@ class _MotivationViewState extends State<MotivationView>
             ],
           ),
           child: Center(
-            child: Text(
-              'Start Your Journey',
-              style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            child: _isEntering
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    'Start Your Journey',
+                    style: TextStyle(fontFamily: 'PlusJakartaSans',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -309,7 +329,7 @@ class _GoalCurvePainter extends CustomPainter {
         text: label,
         style: TextStyle(
           color: Colors.white.withValues(alpha: 0.85),
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
       ),

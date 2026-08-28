@@ -94,7 +94,7 @@ class _RewardUnlockedModalState extends State<RewardUnlockedModal>
                   Text(
                     'Achievement Unlocked!',
                     style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: info.color1,
                       letterSpacing: 1.2,
@@ -115,7 +115,7 @@ class _RewardUnlockedModalState extends State<RewardUnlockedModal>
                     info.motivationalMessage,
                     textAlign: TextAlign.center,
                     style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: FontWeight.w400,
                       color: Colors.white.withValues(alpha: 0.72),
                       height: 1.55,
@@ -224,7 +224,7 @@ class _ContinueButton extends StatelessWidget {
           child: Text(
             'Continue',
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 16,
+              fontSize: 17,
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),

@@ -76,10 +76,10 @@ class _ProgressHeader extends StatelessWidget {
           // Decorative circles
           Positioned(
             top: -24,
-            right: 120,
+            right: -20,
             child: Container(
-              width: 130,
-              height: 130,
+              width: 160,
+              height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.05),
@@ -98,10 +98,20 @@ class _ProgressHeader extends StatelessWidget {
               ),
             ),
           ),
+          // Subtle abstract watermark — replaces the character illustration
+          Positioned(
+            right: 4,
+            top: topPad + 4,
+            child: PhosphorIcon(
+              PhosphorIcons.chartLineUp(),
+              size: 100,
+              color: Colors.white.withValues(alpha: 0.06),
+            ),
+          ),
 
           // Text + summary chips
           Padding(
-            padding: EdgeInsets.fromLTRB(20, topPad + 20, 160, 28),
+            padding: EdgeInsets.fromLTRB(20, topPad + 20, 20, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -126,7 +136,7 @@ class _ProgressHeader extends StatelessWidget {
                   'This week at a glance',
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w400,
                     color: Colors.white.withValues(alpha: 0.65),
                   ),
@@ -149,29 +159,6 @@ class _ProgressHeader extends StatelessWidget {
                   ],
                 )),
               ],
-            ),
-          ),
-
-          // Character — starts below status bar so head is never clipped
-          Positioned(
-            right: 0,
-            bottom: 0,
-            top: topPad,
-            child: Image.asset(
-              'assets/images/meal_character.png',
-              width: 152,
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomCenter,
-              errorBuilder: (context, error, stack) => SizedBox(
-                width: 152,
-                child: Center(
-                  child: PhosphorIcon(
-                    PhosphorIcons.personSimpleRun(),
-                    size: 56,
-                    color: Colors.white.withValues(alpha: 0.25),
-                  ),
-                ),
-              ),
             ),
           ),
         ],
@@ -237,7 +224,7 @@ class _HeaderChip extends StatelessWidget {
             label,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),
@@ -280,7 +267,7 @@ class _StreakCard extends StatelessWidget {
                     'Current Streak',
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
                       color: Colors.white.withValues(alpha: 0.65),
                     ),
@@ -307,7 +294,7 @@ class _StreakCard extends StatelessWidget {
                           streak == 1 ? 'day' : 'days',
                           style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.w500,
                             color: Colors.white.withValues(alpha: 0.75),
                           ),
@@ -325,7 +312,7 @@ class _StreakCard extends StatelessWidget {
                   'Personal Best',
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w400,
                     color: Colors.white.withValues(alpha: 0.55),
                   ),
@@ -335,7 +322,7 @@ class _StreakCard extends StatelessWidget {
                   '$longest days',
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFFF5A623),
                   ),
@@ -378,7 +365,7 @@ class _WeeklyStatsCard extends StatelessWidget {
               'This Week',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
@@ -454,7 +441,7 @@ class _WeekStat extends StatelessWidget {
                     text: value,
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 18,
+                      fontSize: 19,
                       fontWeight: FontWeight.w800,
                       color: color,
                     ),
@@ -463,7 +450,7 @@ class _WeekStat extends StatelessWidget {
                     text: ' $unit',
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                     ),
@@ -476,7 +463,7 @@ class _WeekStat extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textSecondary,
               ),
@@ -525,7 +512,7 @@ class _CaloriesChart extends StatelessWidget {
               'Calories This Week',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
@@ -550,7 +537,7 @@ class _CaloriesChart extends StatelessWidget {
                               '${val.round()}',
                               style: TextStyle(
                                 fontFamily: 'PlusJakartaSans',
-                                fontSize: 8,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: isToday
                                     ? AppColors.primary
@@ -574,7 +561,7 @@ class _CaloriesChart extends StatelessWidget {
                             _days[i],
                             style: TextStyle(
                               fontFamily: 'PlusJakartaSans',
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: isToday
                                   ? FontWeight.w700
                                   : FontWeight.w500,
@@ -630,7 +617,7 @@ class _NutritionCard extends StatelessWidget {
               'Daily Averages',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
@@ -680,7 +667,7 @@ class _AverageRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
@@ -690,7 +677,7 @@ class _AverageRow extends StatelessWidget {
               value,
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
@@ -758,7 +745,7 @@ class _AIInsightCard extends StatelessWidget {
                   'Weekly Insight',
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
@@ -770,7 +757,7 @@ class _AIInsightCard extends StatelessWidget {
               ctrl.aiInsight,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w400,
                 color: AppColors.textSecondary,
                 height: 1.5,

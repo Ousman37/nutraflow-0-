@@ -104,7 +104,7 @@ class _CircularNutritionProgressState extends State<CircularNutritionProgress>
                       widget.encouragementText,
                       textAlign: TextAlign.center,
                       style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                        fontSize: 11.5,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.90),
                         height: 1.42,
@@ -126,7 +126,7 @@ class _CircularNutritionProgressState extends State<CircularNutritionProgress>
                     Text(
                       widget.levelText,
                       style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w400,
                         color: Colors.white.withValues(alpha: 0.68),
                         letterSpacing: 0.25,

@@ -208,7 +208,7 @@ class _SectionHeader extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppColors.textSecondary,
               letterSpacing: 1.2,
@@ -227,7 +227,7 @@ class _SectionHeader extends StatelessWidget {
           Text(
             '$mealCount meal${mealCount == 1 ? '' : 's'}',
             style: TextStyle(fontFamily: 'PlusJakartaSans', 
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppColors.textHint,
             ),
@@ -399,7 +399,7 @@ class _MealCard extends StatelessWidget {
                         child: Text(
                           '${meal.nutrition.score}',
                           style: TextStyle(fontFamily: 'PlusJakartaSans', 
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: _scoreColor,
                           ),
@@ -506,7 +506,7 @@ class _MacroPill extends StatelessWidget {
       child: Text(
         '$label  ${value.round()}g',
         style: TextStyle(fontFamily: 'PlusJakartaSans', 
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
           color: color,
         ),

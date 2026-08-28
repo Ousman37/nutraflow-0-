@@ -35,7 +35,6 @@ class WorkoutsView extends StatelessWidget {
                     MediaQuery.of(context).padding.bottom + 100,
                   ),
                   children: [
-                    const SizedBox(height: 90), // room for character overflow above card
                     _BodyStatsCard(),
                     const SizedBox(height: 16),
                     _CaloriesBurnedCard(ctrl: ctrl),
@@ -51,7 +50,7 @@ class WorkoutsView extends StatelessWidget {
                         "Today's Workouts",
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 16,
+                          fontSize: 17,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
@@ -172,7 +171,7 @@ class _WeekDateStrip extends StatelessWidget {
                       _labels[i],
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: isSelected
                             ? AppColors.primary
@@ -195,7 +194,7 @@ class _WeekDateStrip extends StatelessWidget {
                           '${day.day}',
                           style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: isSelected || isToday
                                 ? FontWeight.w700
                                 : FontWeight.w500,
@@ -219,7 +218,7 @@ class _WeekDateStrip extends StatelessWidget {
   }
 }
 
-// ── Body stats card with fitness character ────────────────────────────────────
+// ── Body stats card with a minimal activity panel ───────────────────────────
 
 class _BodyStatsCard extends StatelessWidget {
   @override
@@ -229,147 +228,105 @@ class _BodyStatsCard extends StatelessWidget {
     final ht = profile?.heightCm;
     final targetWeight = weight != null ? (weight - 3).clamp(40.0, weight) : null;
 
-    const cardHeight = 120.0;
-    const characterHeight = 210.0;
-    const characterWidth = 130.0;
-    const overflowTop = characterHeight - cardHeight; // 90px above card
-
-    return SizedBox(
-      height: cardHeight + overflowTop,
-      child: Stack(
-        clipBehavior: Clip.none,
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.10),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          // ── Card sits at the bottom of the stack ─────────────────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: cardHeight,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.10),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
+          // Stats section
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Stats section
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Body Stats',
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
-                              letterSpacing: 0.4,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              _BodyStatItem(
-                                label: 'Weight',
-                                value: weight != null
-                                    ? '${weight.round()} kg'
-                                    : '— kg',
-                                icon: PhosphorIcons.scales(),
-                                color: AppColors.primary,
-                              ),
-                              Container(
-                                  width: 1,
-                                  height: 36,
-                                  color: AppColors.divider),
-                              _BodyStatItem(
-                                label: 'Height',
-                                value: ht != null ? '${ht.round()} cm' : '—',
-                                icon: PhosphorIcons.ruler(),
-                                color: AppColors.secondary,
-                              ),
-                              if (targetWeight != null) ...[
-                                Container(
-                                    width: 1,
-                                    height: 36,
-                                    color: AppColors.divider),
-                                _BodyStatItem(
-                                  label: 'Target',
-                                  value: '${targetWeight.round()} kg',
-                                  icon: PhosphorIcons.target(),
-                                  color: AppColors.warning,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
+                  Text(
+                    'Body Stats',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                      letterSpacing: 0.4,
                     ),
                   ),
-                  // Reserve space for the character on the right
-                  const SizedBox(width: characterWidth),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _BodyStatItem(
+                        label: 'Weight',
+                        value: weight != null
+                            ? '${weight.round()} kg'
+                            : '— kg',
+                        icon: PhosphorIcons.scales(),
+                        color: AppColors.primary,
+                      ),
+                      Container(width: 1, height: 36, color: AppColors.divider),
+                      _BodyStatItem(
+                        label: 'Height',
+                        value: ht != null ? '${ht.round()} cm' : '—',
+                        icon: PhosphorIcons.ruler(),
+                        color: AppColors.secondary,
+                      ),
+                      if (targetWeight != null) ...[
+                        Container(width: 1, height: 36, color: AppColors.divider),
+                        _BodyStatItem(
+                          label: 'Target',
+                          value: '${targetWeight.round()} kg',
+                          icon: PhosphorIcons.target(),
+                          color: AppColors.warning,
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
-
-          // ── Green gradient panel behind the character ─────────────────────
-          Positioned(
-            right: 0,
-            bottom: 0,
-            width: characterWidth,
-            height: cardHeight,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF1A7A38),
-                    const Color(0xFF0D3D1E),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
+          // Minimal green activity panel — replaces the character illustration
+          Container(
+            width: 92,
+            height: 120,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1A7A38), Color(0xFF0D3D1E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
-          ),
-
-          // ── Character image – anchored to bottom-right, overflows top ─────
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Image.asset(
-              'assets/images/workout_character.png',
-              width: characterWidth,
-              height: characterHeight,
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomCenter,
-              errorBuilder: (context, error, stack) => SizedBox(
-                width: characterWidth,
-                height: characterHeight,
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: PhosphorIcon(
-                    PhosphorIcons.personSimpleRun(),
-                    size: 64,
-                    color: AppColors.primary.withValues(alpha: 0.35),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
                   ),
                 ),
-              ),
+                PhosphorIcon(
+                  PhosphorIcons.barbell(PhosphorIconsStyle.fill),
+                  size: 26,
+                  color: Colors.white,
+                ),
+              ],
             ),
           ),
         ],
@@ -403,7 +360,7 @@ class _BodyStatItem extends StatelessWidget {
             value,
             style: TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 16,
+              fontSize: 17,
               fontWeight: FontWeight.w800,
               color: color,
             ),
@@ -413,7 +370,7 @@ class _BodyStatItem extends StatelessWidget {
             label,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
             ),
@@ -497,7 +454,7 @@ class _CaloriesBurnedCard extends StatelessWidget {
                           'Calories burned',
                           style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w400,
                             color: Colors.white70,
                           ),
@@ -532,7 +489,7 @@ class _CaloriesBurnedCard extends StatelessWidget {
                               '${t.emoji} ${t.label}',
                               style: TextStyle(
                                 fontFamily: 'PlusJakartaSans',
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: done
                                     ? FontWeight.w700
                                     : FontWeight.w400,
@@ -660,7 +617,7 @@ class _StatItem extends StatelessWidget {
                     text: ' $unit',
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                     ),
@@ -673,7 +630,7 @@ class _StatItem extends StatelessWidget {
             label,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
             ),
@@ -731,7 +688,7 @@ class _LogButton extends StatelessWidget {
               'Log a Workout',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
@@ -763,7 +720,7 @@ class _EmptyState extends StatelessWidget {
               'No workouts yet',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 17,
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
@@ -773,7 +730,7 @@ class _EmptyState extends StatelessWidget {
               'Log your first workout to start\ntracking your fitness progress.',
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w400,
                 color: AppColors.textSecondary,
               ),
@@ -875,7 +832,7 @@ class _WorkoutCard extends StatelessWidget {
                     workout.type.label,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
@@ -890,7 +847,7 @@ class _WorkoutCard extends StatelessWidget {
                         '${workout.durationMinutes} min',
                         style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w400,
                           color: AppColors.textSecondary,
                         ),
@@ -902,13 +859,13 @@ class _WorkoutCard extends StatelessWidget {
                                 TextStyle(color: AppColors.textSecondary)),
                         const SizedBox(width: 8),
                         const Text('🔥',
-                            style: TextStyle(fontSize: 11)),
+                            style: TextStyle(fontSize: 12)),
                         const SizedBox(width: 2),
                         Text(
                           '${workout.caloriesBurned!.round()} kcal',
                           style: const TextStyle(
                             fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w400,
                             color: AppColors.textSecondary,
                           ),
@@ -926,7 +883,7 @@ class _WorkoutCard extends StatelessWidget {
                   _formatTime(workout.createdAt),
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary,
                   ),
@@ -943,7 +900,7 @@ class _WorkoutCard extends StatelessWidget {
                     workout.type.label,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
                     ),

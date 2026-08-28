@@ -116,7 +116,7 @@ class _MacroCircle extends StatelessWidget {
                   style: AppTextStyles.labelMedium.copyWith(
                     color: color,
                     fontWeight: FontWeight.w700,
-                    fontSize: 11,
+                    fontSize: 12,
                   ),
                 ),
               ),

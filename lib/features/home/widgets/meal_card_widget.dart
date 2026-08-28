@@ -231,7 +231,7 @@ class _ScoreBadge extends StatelessWidget {
       ),
       child: Text(
         '$score',
-        style: AppTextStyles.labelLarge.copyWith(color: _color, fontSize: 13),
+        style: AppTextStyles.labelLarge.copyWith(color: _color, fontSize: 14),
       ),
     );
   }
