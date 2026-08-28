@@ -82,7 +82,11 @@ class SubscriptionService {
     debugPrint('[RevenueCat] configure() starting — key prefix '
         '"${_safePrefixFor(apiKey)}", '
         '${kReleaseMode ? "release" : kProfileMode ? "profile" : "debug"} build.');
-    await Purchases.setLogLevel(LogLevel.debug);
+    // Verbose RevenueCat SDK logging (which includes raw signed transaction
+    // JWTs) is invaluable for local debugging but must never ship in a
+    // release/TestFlight/App Store build — restrict it to non-release
+    // builds only.
+    await Purchases.setLogLevel(kReleaseMode ? LogLevel.warn : LogLevel.debug);
     await Purchases.configure(PurchasesConfiguration(apiKey));
     _configured = true;
     final appUserId = await Purchases.appUserID;

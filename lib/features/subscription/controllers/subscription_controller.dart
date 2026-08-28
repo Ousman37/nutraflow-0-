@@ -19,6 +19,15 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
   final _firestoreService = FirestoreService();
 
   final Rx<SubscriptionStatus> status = SubscriptionStatus.loading.obs;
+  // The live `NutraFlow Pro` EntitlementInfo (renewal date, trial/period
+  // type, etc.) — kept in sync every time CustomerInfo updates, for
+  // screens (Settings) that need to display real subscription details
+  // rather than just the pro/free boolean.
+  final Rx<EntitlementInfo?> activeEntitlement = Rx<EntitlementInfo?>(null);
+  // RevenueCat's deep link to the platform's native subscription management
+  // page for this customer (App Store/Play Store). Null until CustomerInfo
+  // has loaded at least once.
+  final RxnString managementUrl = RxnString();
   final RxInt freeAnalysesUsed = 0.obs;
   final RxBool isPurchasing = false.obs;
   final RxBool isRestoring = false.obs;
@@ -33,6 +42,13 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
   final RxString yearlyPriceString = '···'.obs;
   final RxString selectedPlan = 'yearly'.obs;
   bool _offeringsLoaded = false;
+
+  // Whether THIS user (not just the product) is eligible for the plan's
+  // App Store/Play introductory offer — many users have already used theirs.
+  // Resolved via StoreKit/RevenueCat (Purchases.checkTrialOrIntroductoryPriceEligibility),
+  // never assumed. Defaults to false (show the normal offer) until resolved.
+  final RxBool isMonthlyTrialEligible = false.obs;
+  final RxBool isYearlyTrialEligible = false.obs;
 
   // Drives the paywall's CTA button: spinner while an attempt is in flight,
   // "Retry" once every retry has been exhausted without success. These are
@@ -262,6 +278,7 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
     if (monthly != null || yearly != null) {
       _offeringsLoaded = true;
       offeringsFailed.value = false;
+      _checkTrialEligibility(); // fire-and-forget
     } else if (retriesLeft > 0) {
       await Future.delayed(const Duration(seconds: 2));
       return _fetchOfferingsAttempt(retriesLeft: retriesLeft - 1);
@@ -273,19 +290,91 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
     }
   }
 
+  // Asks StoreKit/RevenueCat directly whether THIS customer is eligible for
+  // each plan's introductory offer (e.g. the 7-day free trial configured in
+  // App Store Connect) — never assumed. A user who has already redeemed a
+  // trial for this product, or otherwise isn't eligible, comes back
+  // `noIntroOfferExists`/`ineligible` here and simply sees the normal
+  // subscription offer instead of trial copy.
+  Future<void> _checkTrialEligibility() async {
+    if (!_sdkReady) return;
+    final monthlyId = monthlyPackage.value?.storeProduct.identifier;
+    final yearlyId = yearlyPackage.value?.storeProduct.identifier;
+    final ids = {?monthlyId, ?yearlyId}.toList();
+    if (ids.isEmpty) return;
+
+    try {
+      final result = await Purchases.checkTrialOrIntroductoryPriceEligibility(ids);
+      bool eligible(String? id) =>
+          id != null &&
+          result[id]?.status ==
+              IntroEligibilityStatus.introEligibilityStatusEligible;
+      isMonthlyTrialEligible.value = eligible(monthlyId);
+      isYearlyTrialEligible.value = eligible(yearlyId);
+      debugPrint('[RevenueCat] trial eligibility — monthly='
+          '${isMonthlyTrialEligible.value}, yearly=${isYearlyTrialEligible.value}');
+    } catch (e) {
+      // Fail closed on eligibility specifically — never show trial copy we
+      // can't confirm the user actually qualifies for.
+      debugPrint('[RevenueCat] checkTrialOrIntroductoryPriceEligibility '
+          'failed: $e — defaulting to not-eligible (normal offer shown).');
+      isMonthlyTrialEligible.value = false;
+      isYearlyTrialEligible.value = false;
+    }
+  }
+
   // ── RevenueCat customer info listener ─────────────────────────────────────
   // Called whenever RevenueCat delivers an updated CustomerInfo — including
   // async entitlement confirmations that arrive after purchasePackage() returns.
 
   void _onCustomerInfoUpdate(CustomerInfo info) {
+    activeEntitlement.value = info.entitlements.all[SubscriptionConfig.entitlementId];
+    managementUrl.value = info.managementURL;
     final nowIsPro = _service.isActiveFromInfo(info);
     if (nowIsPro && status.value != SubscriptionStatus.pro) {
       status.value = SubscriptionStatus.pro;
       _persistProStatus(true);
+      _reactToEntitlementChange(becamePro: true);
     } else if (!nowIsPro && status.value == SubscriptionStatus.pro) {
       // Subscription expired or was revoked
       status.value = SubscriptionStatus.free;
       _persistProStatus(false);
+      _reactToEntitlementChange(becamePro: false);
+    }
+  }
+
+  // Keeps navigation in sync with entitlement changes that happen without a
+  // direct user action in this method call — e.g. the passive
+  // CustomerInfoUpdateListener confirming a trial/purchase after the
+  // paywall already showed "Activating…", or a subscription lapsing while
+  // the user is sitting inside the app. Explicit purchase/restore success
+  // (_activatePro) calls _dismissPaywallIfPresent() directly too; that call
+  // is idempotent, so whichever path fires first wins with no double-nav.
+  void _reactToEntitlementChange({required bool becamePro}) {
+    if (becamePro) {
+      _dismissPaywallIfPresent();
+    } else if (Get.currentRoute == AppRoutes.home) {
+      // Entitlement lapsed (expired/cancelled/refunded) while the user was
+      // inside the main app — re-gate immediately, without touching any of
+      // their stored nutrition/workout data. It simply becomes reachable
+      // again the moment the entitlement is active again.
+      Get.offAllNamed(AppRoutes.paywall);
+    }
+  }
+
+  // Leaves the paywall the right way depending on how it was reached:
+  // pops (revealing whatever screen — e.g. Home — was underneath, for the
+  // "tapped a Pro-only feature" case) if there's something to pop back to,
+  // or offAllNamed(home) if the paywall is the entire navigation stack (the
+  // post-onboarding hard-access-gate case, where nothing is underneath it).
+  // A no-op once the paywall is no longer the current route, so calling it
+  // from more than one place is always safe.
+  void _dismissPaywallIfPresent() {
+    if (Get.currentRoute != AppRoutes.paywall) return;
+    if (Get.key.currentState?.canPop() ?? false) {
+      Get.back();
+    } else {
+      Get.offAllNamed(AppRoutes.home);
     }
   }
 
@@ -452,7 +541,7 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
       // Close the paywall regardless — the store already accepted the
       // transaction. The _onCustomerInfoUpdate listener will handle the
       // final unlock whenever RevenueCat's backend catches up.
-      Get.back();
+      _dismissPaywallIfPresent();
       Get.snackbar(
         'Activating subscription…',
         'Your Pro access is being confirmed and will unlock shortly.',
@@ -467,7 +556,7 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
   Future<void> _activatePro({required bool isRestore}) async {
     status.value = SubscriptionStatus.pro;
     await _persistProStatus(true);
-    Get.back();
+    _dismissPaywallIfPresent();
     _showProWelcome(isRestore: isRestore);
   }
 
@@ -633,6 +722,20 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
           'product isn\'t attached to any entitlement in the RevenueCat '
           'dashboard.');
     }
+  }
+
+  // Single source of truth for "may this user enter the main app" — called
+  // by AuthController.enterMainApp() right after login/onboarding/resume.
+  // A user is granted access if their `NutraFlow Pro` entitlement is active
+  // for ANY reason RevenueCat considers it active — including a currently
+  // running free trial. RevenueCat does not distinguish a trialing
+  // subscription from a paid one in `entitlements.active`, so a trial user
+  // is treated identically to a paying subscriber everywhere this (or
+  // requirePro/requireMealAccess) is checked — no separate trial logic
+  // needed.
+  Future<bool> hasActiveAccess() async {
+    await _resolveIsProFresh('App access gate');
+    return isPro;
   }
 
   Future<bool> requirePro({String screenName = 'Pro screen'}) async {
