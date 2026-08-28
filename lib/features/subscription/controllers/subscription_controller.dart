@@ -551,10 +551,20 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
   // the moment of the tap, and only falls back to cached state if that live
   // check can't complete in time. `status` is updated as a side effect via
   // _onCustomerInfoUpdate, so the rest of the UI stays in sync too.
-  Future<void> _resolveIsProFresh() async {
+  Future<void> _resolveIsProFresh(String navigationRequest) async {
+    debugPrint('[RevenueCat] ── gate check start — navigation request: '
+        '$navigationRequest');
+    debugPrint('[RevenueCat] sdkReady=$_sdkReady, controller status='
+        '${status.value}, cached appUserID='
+        '${_sdkReady ? "(configured, see below)" : "n/a — SDK not configured"}');
+
     if (!_sdkReady) {
       // No usable RevenueCat key for this build — nothing live to ask;
-      // _initialize() already resolved `status` from local cache.
+      // _initialize() already resolved `status` from local cache. This
+      // means the app never actually configured Purchases with a real key
+      // for this build — check _resolveApiKey()'s startup log for why.
+      debugPrint('[RevenueCat] SDK not configured — using cached/local '
+          'status only for this decision.');
       await _awaitStatusResolved();
       return;
     }
@@ -565,19 +575,23 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
     // user instead of this account — a likely cause of a freshly-logged-in
     // Pro subscriber briefly seeing the paywall.
     if (_pendingLogin != null) {
+      debugPrint('[RevenueCat] awaiting in-flight logIn(uid) before checking '
+          'entitlement, so this doesn\'t ask about the wrong RC identity.');
       try {
         await _pendingLogin!.timeout(const Duration(seconds: 5));
       } catch (_) {}
     }
 
     try {
+      final appUserId = await Purchases.appUserID;
       final info = await _service
           .getCustomerInfo()
           .timeout(const Duration(seconds: 4));
-      _logEntitlementDetails(info);
+      debugPrint('[RevenueCat] CustomerInfo fetched successfully.');
+      _logEntitlementDetails(info, appUserId);
       _onCustomerInfoUpdate(info);
     } catch (e) {
-      debugPrint('[RevenueCat] live entitlement check failed ($e) — '
+      debugPrint('[RevenueCat] CustomerInfo fetch FAILED ($e) — '
           'falling back to cached status for this gate check.');
       await _awaitStatusResolved();
     }
@@ -586,31 +600,55 @@ class SubscriptionController extends GetxController with WidgetsBindingObserver 
   // Debug-only visibility into the exact entitlement RevenueCat is
   // reporting for this account at gate-check time. Deliberately limited to
   // identifiers/booleans/dates — never receipts, prices, or other purchase
-  // details.
-  void _logEntitlementDetails(CustomerInfo info) {
-    final entitlement = info.entitlements.all[SubscriptionConfig.entitlementId];
-    debugPrint('[RevenueCat] gate check — appUserId="${info.originalAppUserId}", '
-        'entitlementId="${SubscriptionConfig.entitlementId}", '
-        'exists=${entitlement != null}, '
-        'isActive=${entitlement?.isActive ?? false}, '
-        'expirationDate=${entitlement?.expirationDate ?? "none"}');
+  // details. Logs `entitlements.all` (not just `.active`) so a dashboard
+  // naming mismatch (entitlement exists under a different identifier) is
+  // visibly distinguishable from a genuine identity mismatch (this
+  // RevenueCat customer has no entitlement record at all).
+  void _logEntitlementDetails(CustomerInfo info, String currentAppUserId) {
+    final wanted = SubscriptionConfig.entitlementId;
+    final entitlement = info.entitlements.all[wanted];
+    debugPrint('[RevenueCat] RevenueCat user (current appUserID): '
+        '"$currentAppUserId"');
+    debugPrint('[RevenueCat] CustomerInfo.originalAppUserId: '
+        '"${info.originalAppUserId}"');
+    debugPrint('[RevenueCat] All known entitlements (active or not): '
+        '${info.entitlements.all.keys.toList()}');
+    debugPrint('[RevenueCat] Active entitlements: '
+        '${info.entitlements.active.keys.toList()}');
+    debugPrint('[RevenueCat] Looking for entitlementId="$wanted" — '
+        'exists=${entitlement != null}');
+    debugPrint('[RevenueCat] "$wanted" active: ${entitlement?.isActive ?? false}');
+    if (entitlement != null) {
+      debugPrint('[RevenueCat] "$wanted" expirationDate: '
+          '${entitlement.expirationDate ?? "none (lifetime or not set)"}');
+    } else if (info.entitlements.all.isNotEmpty) {
+      debugPrint('[RevenueCat] NOTE: this customer has other entitlement(s) '
+          '${info.entitlements.all.keys.toList()} but none named exactly '
+          '"$wanted" — check for an identifier mismatch against the '
+          'RevenueCat dashboard (Entitlements → Identifier).');
+    } else {
+      debugPrint('[RevenueCat] NOTE: this customer has ZERO entitlements on '
+          'record at all. Either no purchase is attached to this '
+          'RevenueCat identity (appUserID above), or the purchased '
+          'product isn\'t attached to any entitlement in the RevenueCat '
+          'dashboard.');
+    }
   }
 
-  Future<bool> requirePro() async {
-    await _resolveIsProFresh();
+  Future<bool> requirePro({String screenName = 'Pro screen'}) async {
+    await _resolveIsProFresh(screenName);
     final allowed = isPro;
-    debugPrint('[RevenueCat] requirePro() decision: '
-        '${allowed ? "granted — opening screen" : "denied — showing paywall"}');
+    debugPrint('[RevenueCat] Decision: ${allowed ? "OPEN_SCREEN" : "SHOW_PAYWALL"}');
     if (allowed) return true;
     Get.toNamed(AppRoutes.paywall);
     return false;
   }
 
   Future<bool> requireMealAccess() async {
-    await _resolveIsProFresh();
+    await _resolveIsProFresh('Meal logging');
     final allowed = canLogMeal;
-    debugPrint('[RevenueCat] requireMealAccess() decision: '
-        '${allowed ? "granted" : "denied — showing paywall"}');
+    debugPrint('[RevenueCat] Decision: ${allowed ? "OPEN_SCREEN" : "SHOW_PAYWALL"} '
+        '(canLogMeal=$canLogMeal, isPro=$isPro, freeAnalysesLeft=$freeAnalysesLeft)');
     if (allowed) return true;
     Get.toNamed(AppRoutes.paywall);
     return false;

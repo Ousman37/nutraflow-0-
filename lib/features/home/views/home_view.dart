@@ -219,7 +219,7 @@ class _FloatingNav extends StatelessWidget {
                       isActive: ctrl.selectedTabIndex.value == 2,
                       onTap: () async {
                         if (!await Get.find<SubscriptionController>()
-                            .requirePro()) {
+                            .requirePro(screenName: 'Workouts')) {
                           return;
                         }
                         HapticFeedback.selectionClick();
@@ -232,7 +232,7 @@ class _FloatingNav extends StatelessWidget {
                       isActive: ctrl.selectedTabIndex.value == 3,
                       onTap: () async {
                         if (!await Get.find<SubscriptionController>()
-                            .requirePro()) {
+                            .requirePro(screenName: 'Progress')) {
                           return;
                         }
                         HapticFeedback.selectionClick();
