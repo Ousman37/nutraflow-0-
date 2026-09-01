@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -789,7 +790,12 @@ class _BottomActions extends StatelessWidget {
           }),
           const SizedBox(height: 10),
           Text(
-            'Subscription renews automatically. Cancel anytime in App Store / Google Play settings.',
+            // Platform-specific: App Store review (Guideline 2.3.10)
+            // rejects any Google Play / Android store wording appearing in
+            // the iOS binary's UI — never show it there.
+            Platform.isIOS
+                ? 'Subscription renews automatically. Cancel anytime in your App Store account settings.'
+                : 'Subscription renews automatically. Cancel anytime in your Google Play account settings.',
             textAlign: TextAlign.center,
             style: TextStyle(fontFamily: 'PlusJakartaSans',
               fontSize: 11,
