@@ -43,174 +43,200 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    // The Save button used to live inside the same scroll view as the form
+    // fields. Once the keyboard opened for the Notes field, the keyboard's
+    // own focus-scroll only guaranteed the focused field stayed visible —
+    // it pushed the button (further down, after Notes) out of the visible
+    // viewport with no obvious way to find it. Pinning the button as a
+    // fixed footer outside the scrollable area keeps it visible at all
+    // times, keyboard open or not.
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + bottomInset),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drag handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDDE0EE),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-
-            const Text(
-              'Log Workout',
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Workout type grid
-            const Text(
-              'Type',
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 10),
-            _WorkoutTypeGrid(
-              selected: _selectedType,
-              onSelect: (t) => setState(() => _selectedType = t),
-            ),
-
-            const SizedBox(height: 22),
-
-            // Duration
-            Row(
-              children: [
-                const Text(
-                  'Duration',
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '$_durationMinutes min',
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: AppColors.primary,
-                thumbColor: AppColors.primary,
-                inactiveTrackColor: AppColors.primary.withValues(alpha: 0.2),
-                overlayColor: AppColors.primary.withValues(alpha: 0.12),
-                trackHeight: 4,
-              ),
-              child: Slider(
-                value: _durationMinutes.toDouble(),
-                min: 5,
-                max: 180,
-                divisions: 35,
-                onChanged: (v) => setState(() => _durationMinutes = v.round()),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Estimated calories
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  PhosphorIcon(
-                    PhosphorIcons.flame(),
-                    size: 16,
-                    color: AppColors.warning,
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDDE0EE),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Estimated ${_estimatedCalories().round()} kcal burned',
-                    style: const TextStyle(
+                  const SizedBox(height: 18),
+
+                  const Text(
+                    'Log Workout',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Workout type grid
+                  const Text(
+                    'Type',
+                    style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _WorkoutTypeGrid(
+                    selected: _selectedType,
+                    onSelect: (t) => setState(() => _selectedType = t),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // Duration
+                  Row(
+                    children: [
+                      const Text(
+                        'Duration',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '$_durationMinutes min',
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: AppColors.primary,
+                      thumbColor: AppColors.primary,
+                      inactiveTrackColor: AppColors.primary.withValues(
+                        alpha: 0.2,
+                      ),
+                      overlayColor: AppColors.primary.withValues(alpha: 0.12),
+                      trackHeight: 4,
+                    ),
+                    child: Slider(
+                      value: _durationMinutes.toDouble(),
+                      min: 5,
+                      max: 180,
+                      divisions: 35,
+                      onChanged: (v) =>
+                          setState(() => _durationMinutes = v.round()),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Estimated calories
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        PhosphorIcon(
+                          PhosphorIcons.flame(),
+                          size: 16,
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Estimated ${_estimatedCalories().round()} kcal burned',
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Notes
+                  const Text(
+                    'Notes (optional)',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _notesCtrl,
+                    maxLines: 2,
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 15,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Morning run in the park',
+                      hintStyle: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        color: AppColors.textHint,
+                        fontSize: 14,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.inputFill,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // Notes
-            const Text(
-              'Notes (optional)',
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _notesCtrl,
-              maxLines: 2,
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 15,
-                color: AppColors.textPrimary,
-              ),
-              decoration: InputDecoration(
-                hintText: 'e.g. Morning run in the park',
-                hintStyle: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  color: AppColors.textHint,
-                  fontSize: 14,
-                ),
-                filled: true,
-                fillColor: AppColors.inputFill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Save button
-            GetBuilder<WorkoutsController>(
+          ),
+          // Save button — pinned outside the scroll area (see comment
+          // above) so it's always visible, keyboard open or not.
+          Padding(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, 20 + bottomInset),
+            child: GetBuilder<WorkoutsController>(
               builder: (ctrl) {
                 return GestureDetector(
                   onTap: ctrl.isSaving.value
@@ -236,53 +262,53 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
                             borderRadius: 12,
                           );
                         },
-                  child: Obx(() => AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: double.infinity,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          gradient: ctrl.isSaving.value
-                              ? null
-                              : const LinearGradient(
-                                  colors: [
-                                    Color(0xFF3CB54A),
-                                    Color(0xFF1A7A38)
-                                  ],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                          color: ctrl.isSaving.value
-                              ? AppColors.primary.withValues(alpha: 0.5)
-                              : null,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Center(
-                          child: ctrl.isSaving.value
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                  ),
-                                )
-                              : const Text(
-                                  'Save Workout',
-                                  style: TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
+                  child: Obx(
+                    () => AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: double.infinity,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        gradient: ctrl.isSaving.value
+                            ? null
+                            : const LinearGradient(
+                                colors: [Color(0xFF3CB54A), Color(0xFF1A7A38)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                        color: ctrl.isSaving.value
+                            ? AppColors.primary.withValues(alpha: 0.5)
+                            : null,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: ctrl.isSaving.value
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
                                   ),
                                 ),
-                        ),
-                      )),
+                              )
+                            : const Text(
+                                'Save Workout',
+                                style: TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -330,10 +356,7 @@ class _WorkoutTypeGrid extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  type.emoji,
-                  style: const TextStyle(fontSize: 24),
-                ),
+                Text(type.emoji, style: const TextStyle(fontSize: 24)),
                 const SizedBox(height: 4),
                 Text(
                   type.label,

@@ -1,6 +1,5 @@
-// This is for   I will try to see how to fix it later than   fix that  and i will let see how can we have it  okay ill try to do it  bu
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../controllers/analytics_controller.dart';
@@ -30,6 +29,43 @@ class AnalyticsView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // This screen is only ever reached by pushing it
+                      // (from Progress's insights button), so it's always
+                      // poppable — unconditional back button, no dead end.
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Get.back();
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: PhosphorIcon(
+                                  PhosphorIcons.arrowLeft(),
+                                  size: 18,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       Text('Progress', style: AppTextStyles.displayMedium),
                       const SizedBox(height: 4),
                       Text(
