@@ -56,7 +56,7 @@ class DefaultFirebaseOptions {
     projectId: 'nutraflow-199ae',
     storageBucket: 'nutraflow-199ae.firebasestorage.app',
     iosClientId: '157447885473-mjtfmkfmri9nebaoh2d2nqifcs8tpg4f.apps.googleusercontent.com',
-    iosBundleId: 'com.example.nutraflow',
+    iosBundleId: 'com.ethan.nutraflow',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -65,6 +65,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: 'YOUR_SENDER_ID',
     projectId: 'YOUR_PROJECT_ID',
     storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-    iosBundleId: 'com.example.nutraflow',
+    iosBundleId: 'com.ethan.nutraflow',
   );
 }

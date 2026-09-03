@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/user_profile_model.dart';
 import '../services/auth_service.dart';
@@ -28,48 +29,93 @@ class AuthController extends GetxController {
     }
   }
 
+  // Every stage below is deliberately its own try/catch. A downstream
+  // failure (Firestore unreachable, RevenueCat unreachable, etc.) must
+  // NEVER be indistinguishable from an actual authentication failure — that
+  // was the root cause behind a real App Store rejection (Guideline
+  // 2.1(a), "sign in failed"): any exception anywhere in this method used
+  // to fall through to one catch-all that silently bounced the user back to
+  // the login screen with zero explanation, even though Firebase Auth
+  // itself had already succeeded. See enterMainApp() and the two try/catch
+  // blocks below for how each stage now fails open instead.
   Future<void> _handleAuthChange(User? user) async {
+    if (user == null) {
+      userProfile.value = null;
+      if (Get.currentRoute != AppRoutes.welcome) {
+        Get.offAllNamed(AppRoutes.welcome);
+      }
+      return;
+    }
+
+    // Stage 1 — confirm the session itself is still valid, and get the
+    // current email-verification state. This is the ONLY stage where an
+    // error can legitimately mean "not signed in" — everything after this
+    // point already knows the user has a valid Firebase session.
+    User? refreshed;
     try {
-      if (user == null) {
-        userProfile.value = null;
-        if (Get.currentRoute != AppRoutes.welcome) {
-          Get.offAllNamed(AppRoutes.welcome);
-        }
-        return;
-      }
-
-      // Reload to get the latest emailVerified state from Firebase
       await user.reload();
-      final refreshed = _authService.currentUser;
-      if (refreshed == null || !refreshed.emailVerified) {
-        if (Get.currentRoute != AppRoutes.verifyEmail) {
-          Get.offAllNamed(AppRoutes.verifyEmail,
-              arguments: {'email': user.email ?? ''});
-        }
-        return;
+      refreshed = _authService.currentUser;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[Auth] user.reload() failed: ${e.code} — ${e.message}');
+      if (e.code == 'user-token-expired' ||
+          e.code == 'user-disabled' ||
+          e.code == 'user-not-found') {
+        // The session really is dead — sign out cleanly and send them to
+        // login (with nothing left to retry).
+        await _authService.signOut();
+        Get.offAllNamed(AppRoutes.login);
       }
+      // Anything else (e.g. network-request-failed) is transient — leave
+      // the user exactly where they are. The auth stream re-fires on the
+      // next successful check, and nothing here misrepresents this as a
+      // failed sign-in.
+      return;
+    } catch (e) {
+      debugPrint('[Auth] user.reload() failed with unexpected error: $e');
+      return;
+    }
 
-      // Never interrupt an active onboarding or post-onboarding motivation flow.
-      // The user is filling in their profile — disposing the controller here
-      // causes "TextEditingController used after disposed" errors.
-      if (Get.currentRoute == AppRoutes.onboarding ||
-          Get.currentRoute == AppRoutes.motivation) {
-        return;
+    if (refreshed == null || !refreshed.emailVerified) {
+      if (Get.currentRoute != AppRoutes.verifyEmail) {
+        Get.offAllNamed(AppRoutes.verifyEmail,
+            arguments: {'email': user.email ?? ''});
       }
+      return;
+    }
 
-      final profile = await _firestoreService.getUserProfile(refreshed.uid);
-      userProfile.value = profile;
-      if (profile == null) {
-        Get.offAllNamed(AppRoutes.onboarding, arguments: {
-          'uid': refreshed.uid,
-          'name': refreshed.displayName ?? '',
-          'email': refreshed.email ?? '',
-        });
-      } else {
-        await enterMainApp();
-      }
-    } catch (_) {
-      Get.offAllNamed(AppRoutes.login);
+    // Never interrupt an active onboarding or post-onboarding motivation flow.
+    // The user is filling in their profile — disposing the controller here
+    // causes "TextEditingController used after disposed" errors.
+    if (Get.currentRoute == AppRoutes.onboarding ||
+        Get.currentRoute == AppRoutes.motivation) {
+      return;
+    }
+
+    // Stage 2 — load the Firestore profile. The user IS authenticated by
+    // this point, so a failure here is a data-loading problem, never an
+    // auth problem — it must not route back to login. Distinguish a clean
+    // "no document" (genuinely new user → onboarding) from "the read
+    // itself failed" (network/permission error → fail open into the app
+    // rather than wrongly re-onboarding an existing user, or getting stuck).
+    UserProfileModel? profile;
+    try {
+      profile = await _firestoreService.getUserProfile(refreshed.uid);
+    } catch (e) {
+      debugPrint('[Auth] Firestore profile load failed for '
+          '${refreshed.uid}: $e');
+      await enterMainApp();
+      return;
+    }
+
+    userProfile.value = profile;
+    if (profile == null) {
+      Get.offAllNamed(AppRoutes.onboarding, arguments: {
+        'uid': refreshed.uid,
+        'name': refreshed.displayName ?? '',
+        'email': refreshed.email ?? '',
+      });
+    } else {
+      await enterMainApp();
     }
   }
 
@@ -81,10 +127,18 @@ class AuthController extends GetxController {
   // this is called while already on the correct screen (e.g. a redundant
   // auth-stream re-emission while the user is mid-session).
   Future<void> enterMainApp() async {
-    final hasAccess = Get.isRegistered<SubscriptionController>()
-        ? await Get.find<SubscriptionController>().hasActiveAccess()
-        : true; // Subscription system unavailable — fail open rather than
-                 // permanently locking every user out of the app.
+    bool hasAccess;
+    try {
+      hasAccess = Get.isRegistered<SubscriptionController>()
+          ? await Get.find<SubscriptionController>().hasActiveAccess()
+          : true;
+    } catch (e) {
+      // A RevenueCat/subscription-check failure must never masquerade as a
+      // failed sign-in — fail open into the app rather than block it.
+      debugPrint('[Auth] Entitlement check failed, entering app anyway '
+          'rather than blocking a successful login: $e');
+      hasAccess = true;
+    }
     final target = hasAccess ? AppRoutes.home : AppRoutes.paywall;
     if (Get.currentRoute != target) {
       Get.offAllNamed(target);
@@ -99,7 +153,16 @@ class AuthController extends GetxController {
       isLoading.value = true;
       await _authService.signInWithEmail(email: email, password: password);
     } on FirebaseAuthException catch (e) {
+      debugPrint('[Auth] signIn FirebaseAuthException: ${e.code} — ${e.message}');
       Get.snackbar('Sign In Failed', _authErrorMessage(e.code),
+          snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      // Anything that isn't a FirebaseAuthException (e.g. Firebase not
+      // configured/initialized) must still surface something to the user
+      // instead of silently doing nothing.
+      debugPrint('[Auth] signIn unexpected error: $e');
+      Get.snackbar('Sign In Failed',
+          'Something went wrong. Please check your connection and try again.',
           snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
@@ -125,7 +188,13 @@ class AuthController extends GetxController {
         arguments: {'uid': cred.user!.uid, 'name': name, 'email': email},
       );
     } on FirebaseAuthException catch (e) {
+      debugPrint('[Auth] signUp FirebaseAuthException: ${e.code} — ${e.message}');
       Get.snackbar('Sign Up Failed', _authErrorMessage(e.code),
+          snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      debugPrint('[Auth] signUp unexpected error: $e');
+      Get.snackbar('Sign Up Failed',
+          'Something went wrong. Please check your connection and try again.',
           snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
@@ -191,6 +260,8 @@ class AuthController extends GetxController {
       );
       Get.back();
     } on FirebaseAuthException catch (e) {
+      debugPrint('[Auth] sendPasswordReset FirebaseAuthException: '
+          '${e.code} — ${e.message}');
       Get.snackbar('Failed', _authErrorMessage(e.code),
           snackPosition: SnackPosition.BOTTOM);
     } finally {
@@ -206,7 +277,13 @@ class AuthController extends GetxController {
         'Verification email resent. Check your inbox.',
         snackPosition: SnackPosition.BOTTOM,
       );
-    } catch (_) {
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[Auth] resendVerificationEmail FirebaseAuthException: '
+          '${e.code} — ${e.message}');
+      Get.snackbar('Error', _authErrorMessage(e.code),
+          snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      debugPrint('[Auth] resendVerificationEmail unexpected error: $e');
       Get.snackbar('Error', 'Could not resend verification email.',
           snackPosition: SnackPosition.BOTTOM);
     }
@@ -244,6 +321,13 @@ class AuthController extends GetxController {
 
   String _authErrorMessage(String code) {
     switch (code) {
+      // Modern Firebase Auth versions return 'invalid-credential' for both
+      // a wrong password AND an unregistered email, to avoid leaking which
+      // one it was — 'user-not-found'/'wrong-password' are kept below for
+      // older SDK behavior, but 'invalid-credential' is the one actually
+      // seen in current sign-in failures.
+      case 'invalid-credential':
+        return 'Incorrect email or password. Please try again.';
       case 'user-not-found':
         return 'No account found with this email.';
       case 'wrong-password':
@@ -254,8 +338,14 @@ class AuthController extends GetxController {
         return 'Password must be at least 6 characters.';
       case 'invalid-email':
         return 'Please enter a valid email address.';
+      case 'network-request-failed':
+        return 'No internet connection. Please check your network and try again.';
       case 'too-many-requests':
         return 'Too many attempts. Please try again later.';
+      case 'operation-not-allowed':
+        return 'Email/password sign-in is currently unavailable. Please try again later.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
       default:
         return 'Authentication failed. Please try again.';
     }
